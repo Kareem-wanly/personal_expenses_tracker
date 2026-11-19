@@ -1,19 +1,22 @@
 "use client";
 
 import { BellIcon, BellOffIcon, Loader2Icon, SendIcon } from "lucide-react";
-import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
+  type PushSupport,
+  VAPID_PUBLIC_KEY,
+  enablePush,
+  usePushState,
+} from "@/lib/push-client";
+import {
   sendTestNotification,
-  subscribePush,
   unsubscribePush,
   updateNotificationPrefs,
 } from "@/server/actions";
-
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
 type Prefs = {
   notifyBudget: boolean;
@@ -39,84 +42,25 @@ const PREF_ITEMS: { key: keyof Prefs; title: string; description: string }[] = [
   },
 ];
 
-/** VAPID keys are base64url; the Push API wants raw bytes. */
-function urlBase64ToUint8Array(base64: string) {
-  const padded = (base64 + "=".repeat((4 - (base64.length % 4)) % 4))
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
-  const raw = atob(padded);
-  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
-}
-
-type Support = "loading" | "supported" | "ios-needs-install" | "unsupported" | "no-sw";
-
 const noop = () => () => {};
 
 export function NotificationSettings({ prefs: initialPrefs }: { prefs: Prefs }) {
   const mounted = useSyncExternalStore(noop, () => true, () => false);
-  const [support, setSupport] = useState<Support>("loading");
-  const [subscription, setSubscription] = useState<PushSubscription | null>(null);
-  const [permission, setPermission] = useState<NotificationPermission>("default");
+  const { support, permission, subscription, setPermission, setSubscription } =
+    usePushState();
   const [prefs, setPrefs] = useState(initialPrefs);
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const hasApis =
-        "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-      if (!hasApis) {
-        const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-        if (!cancelled) setSupport(ios ? "ios-needs-install" : "unsupported");
-        return;
-      }
-      // The service worker only exists in production builds.
-      const reg = await navigator.serviceWorker.getRegistration();
-      if (!reg) {
-        if (!cancelled) setSupport("no-sw");
-        return;
-      }
-      const sub = await reg.pushManager.getSubscription();
-      if (cancelled) return;
-      setSubscription(sub);
-      setPermission(Notification.permission);
-      setSupport("supported");
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   function enable() {
     startTransition(async () => {
-      try {
-        const result = await Notification.requestPermission();
-        setPermission(result);
-        if (result !== "granted") {
-          toast.error("لم يتم منح إذن الإشعارات");
-          return;
-        }
-        const reg = await navigator.serviceWorker.ready;
-        const sub =
-          (await reg.pushManager.getSubscription()) ??
-          (await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY!),
-          }));
-        const res = await subscribePush(
-          sub.toJSON(),
-          Intl.DateTimeFormat().resolvedOptions().timeZone,
-        );
-        if (!res.ok) {
-          await sub.unsubscribe();
-          toast.error(res.message);
-          return;
-        }
-        setSubscription(sub);
+      const res = await enablePush();
+      if (res.ok) {
+        setSubscription(res.subscription);
+        setPermission("granted");
         toast.success(res.message);
-      } catch (err) {
-        console.error(err);
-        toast.error("تعذّر تفعيل الإشعارات على هذا المتصفح");
+      } else {
+        if (res.permission) setPermission(res.permission);
+        toast.error(res.message);
       }
     });
   }
@@ -198,7 +142,7 @@ function DeviceStatus({
   onDisable,
   onTest,
 }: {
-  support: Support;
+  support: PushSupport;
   permission: NotificationPermission;
   subscribed: boolean;
   configured: boolean;

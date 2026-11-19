@@ -7,6 +7,7 @@ import { CategoryBars } from "@/components/category-bars";
 import { EmptyState } from "@/components/empty-state";
 import { AddExpenseButton } from "@/components/expenses/add-expense-button";
 import { ExpenseItem } from "@/components/expenses/expense-item";
+import { NotificationPrompt } from "@/components/notification-prompt";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDayLabel, formatMonthLabel } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
@@ -56,6 +57,8 @@ async function Dashboard() {
           </Link>
         )}
       </section>
+
+      <NotificationPrompt hasExpenses={hasData} />
 
       {/* Quick stats */}
       <section className="grid grid-cols-2 gap-3">
