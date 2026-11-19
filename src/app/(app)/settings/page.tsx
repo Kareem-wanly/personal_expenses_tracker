@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { CategoryManager } from "@/components/settings/category-manager";
 import { InstallApp } from "@/components/settings/install-app";
+import { NotificationSettings } from "@/components/settings/notification-settings";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { ThemeSwitcher } from "@/components/settings/theme-switcher";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,12 @@ export default function SettingsPage() {
         <Section title="التصنيفات">
           <Suspense fallback={<Skeleton className="h-96 rounded-2xl" />}>
             <Categories />
+          </Suspense>
+        </Section>
+
+        <Section title="الإشعارات">
+          <Suspense fallback={<Skeleton className="h-64 rounded-2xl" />}>
+            <Notifications />
           </Suspense>
         </Section>
 
@@ -73,6 +80,19 @@ async function Account() {
         monthlyBudget={user.monthlyBudget}
       />
     </div>
+  );
+}
+
+async function Notifications() {
+  const user = await requireUser();
+  return (
+    <NotificationSettings
+      prefs={{
+        notifyBudget: user.notifyBudget,
+        notifyDailyReminder: user.notifyDailyReminder,
+        notifyMonthlySummary: user.notifyMonthlySummary,
+      }}
+    />
   );
 }
 

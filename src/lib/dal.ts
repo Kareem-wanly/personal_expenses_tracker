@@ -27,6 +27,10 @@ export const getCurrentUser = cache(async () => {
       email: true,
       currency: true,
       monthlyBudget: true,
+      timezone: true,
+      notifyBudget: true,
+      notifyDailyReminder: true,
+      notifyMonthlySummary: true,
     },
   });
   return row ?? null;

@@ -33,6 +33,15 @@ export const user = sqliteTable("user", {
   currency: text("currency").notNull().default("USD"),
   /** Monthly budget in minor units (e.g. cents). Null = no budget. */
   monthlyBudget: integer("monthly_budget"),
+  /** IANA time zone of the user's device (for "today" in cron jobs). */
+  timezone: text("timezone").notNull().default("UTC"),
+  notifyBudget: integer("notify_budget", { mode: "boolean" }).notNull().default(true),
+  notifyDailyReminder: integer("notify_daily_reminder", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  notifyMonthlySummary: integer("notify_monthly_summary", { mode: "boolean" })
+    .notNull()
+    .default(true),
   ...timestamps,
 });
 
@@ -140,6 +149,25 @@ export const expense = sqliteTable(
     index("expense_user_date_idx").on(t.userId, t.date),
     index("expense_user_category_idx").on(t.userId, t.categoryId),
   ],
+);
+
+/** One row per device/browser that allowed notifications. */
+export const pushSubscription = sqliteTable(
+  "push_subscription",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull().unique(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    ...timestamps,
+  },
+  (t) => [index("push_subscription_user_idx").on(t.userId)],
 );
 
 export const userRelations = relations(user, ({ many }) => ({

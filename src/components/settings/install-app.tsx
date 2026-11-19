@@ -1,49 +1,25 @@
 "use client";
 
 import { DownloadIcon, ShareIcon } from "lucide-react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { promptInstall, useInstallPrompt } from "@/lib/install-prompt";
 
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-};
-
-const noop = () => () => {};
-
-/** Shows a native install button (Android/desktop) or iOS instructions. */
+/** Native install button (Android/desktop) or iOS instructions. */
 export function InstallApp() {
-  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const mounted = useSyncExternalStore(noop, () => true, () => false);
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferred(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
+  const { mounted, installed, canPrompt, ios } = useInstallPrompt();
 
   if (!mounted) return null;
-  const standalone =
-    window.matchMedia("(display-mode: standalone)").matches ||
-    // iOS Safari
-    (navigator as Navigator & { standalone?: boolean }).standalone === true;
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-
-  if (standalone) {
+  if (installed) {
     return <p className="text-sm text-muted-foreground">✅ التطبيق مثبّت على جهازك.</p>;
   }
-  if (deferred) {
+  if (canPrompt) {
     return (
       <Button
         className="h-11 w-full"
         onClick={async () => {
-          await deferred.prompt();
-          await deferred.userChoice;
-          setDeferred(null);
+          if (await promptInstall()) toast.success("تم تثبيت التطبيق 🎉");
         }}
       >
         <DownloadIcon />
