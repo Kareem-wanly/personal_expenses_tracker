@@ -4,7 +4,21 @@ import { useCallback, useEffect, useState } from "react";
 
 import { subscribePush } from "@/server/actions";
 
-export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+/** Same forgiving cleanup as the server; invalid keys count as "not configured". */
+function cleanPublicKey(raw: string | undefined) {
+  if (!raw) return undefined;
+  let s = raw.trim().replace(/^["']|["']$/g, "").trim();
+  const prefix = "NEXT_PUBLIC_VAPID_PUBLIC_KEY=";
+  if (s.startsWith(prefix)) s = s.slice(prefix.length).trim();
+  try {
+    const bytes = atob(s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "="));
+    return bytes.length === 65 ? s : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export const VAPID_PUBLIC_KEY = cleanPublicKey(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
 
 export type PushSupport =
   | "loading"

@@ -16,17 +16,45 @@ export type PushPayload = {
   tag?: string;
 };
 
-export const pushEnabled = !!(
-  env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY
-);
+const decodedLength = (b64url: string) => Buffer.from(b64url, "base64url").length;
 
-if (pushEnabled) {
-  setVapidDetails(
-    env.VAPID_SUBJECT,
-    env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-    env.VAPID_PRIVATE_KEY!,
-  );
+/**
+ * Configure VAPID once. Misconfigured keys must never take the whole app
+ * down (they'd fail the build): log which variable is wrong — never its
+ * value — and run with notifications disabled instead.
+ */
+function configureVapid(): boolean {
+  const pub = env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const priv = env.VAPID_PRIVATE_KEY;
+  if (!pub || !priv) return false;
+
+  const problems: string[] = [];
+  if (decodedLength(pub) !== 65) {
+    problems.push(
+      `NEXT_PUBLIC_VAPID_PUBLIC_KEY decodes to ${decodedLength(pub)} bytes (expected 65)`,
+    );
+  }
+  if (decodedLength(priv) !== 32) {
+    problems.push(`VAPID_PRIVATE_KEY decodes to ${decodedLength(priv)} bytes (expected 32)`);
+  }
+  if (!/^(mailto:|https:\/\/)/.test(env.VAPID_SUBJECT)) {
+    problems.push("VAPID_SUBJECT must start with mailto: or https://");
+  }
+
+  try {
+    if (problems.length) throw new Error(problems.join("; "));
+    setVapidDetails(env.VAPID_SUBJECT, pub, priv);
+    return true;
+  } catch (err) {
+    console.error(
+      `[push] Notifications disabled — invalid VAPID config: ${(err as Error).message}. ` +
+        "Paste only the value (no quotes, no NAME=) and redeploy.",
+    );
+    return false;
+  }
 }
+
+export const pushEnabled = configureVapid();
 
 /**
  * Send a notification to every device of a user. Expired subscriptions
