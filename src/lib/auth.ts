@@ -8,9 +8,21 @@ import { db, schema } from "@/db";
 import { DEFAULT_CATEGORIES } from "@/lib/constants";
 import { env } from "@/lib/env";
 
+/** Vercel exposes the deployment domains (without protocol) at runtime. */
+const vercelOrigins = [
+  process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  process.env.VERCEL_BRANCH_URL,
+  process.env.VERCEL_URL,
+]
+  .filter(Boolean)
+  .map((host) => `https://${host}`);
+
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
-  baseURL: env.BETTER_AUTH_URL,
+  // Explicit URL wins; on Vercel fall back to the production domain.
+  baseURL: env.BETTER_AUTH_URL ?? vercelOrigins[0],
+  // Allow preview deployments (their own *.vercel.app URL) to sign in too.
+  trustedOrigins: vercelOrigins,
   database: drizzleAdapter(db, {
     provider: "sqlite",
     schema: {

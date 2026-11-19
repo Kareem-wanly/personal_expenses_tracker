@@ -93,7 +93,8 @@ turso db show expenses --url
 turso db tokens create expenses
 ```
 
-3. طبّق الجداول على قاعدة Turso (من جهازك):
+> الجداول تُنشأ تلقائياً عند كل نشر على Vercel (سكربت `vercel-build` يشغّل `drizzle-kit migrate` قبل البناء).
+> لتطبيقها يدوياً من جهازك:
 
 ```powershell
 $env:DATABASE_URL="libsql://expenses-<org>.turso.io"; $env:DATABASE_AUTH_TOKEN="<token>"; npm run db:migrate
@@ -107,12 +108,12 @@ $env:DATABASE_URL="libsql://expenses-<org>.turso.io"; $env:DATABASE_AUTH_TOKEN="
    - `DATABASE_URL` = رابط Turso (`libsql://...`)
    - `DATABASE_AUTH_TOKEN` = التوكن
    - `BETTER_AUTH_SECRET` = نص عشوائي طويل (مختلف عن المحلي)
-   - `BETTER_AUTH_URL` = رابط موقعك، مثل `https://your-app.vercel.app`
+   - `BETTER_AUTH_URL` (اختياري على Vercel: يُكتشف رابط الموقع تلقائياً، أضفه فقط عند ربط دومين خاص)
 4. Deploy ✅
 
 ### بديل: Netlify
 
-نفس الخطوات: استورد المستودع من [app.netlify.com](https://app.netlify.com)، فيستخدم Netlify محوّل Next.js تلقائياً. أضف متغيرات البيئة نفسها، واجعل `BETTER_AUTH_URL` رابط Netlify.
+نفس الخطوات: استورد المستودع من [app.netlify.com](https://app.netlify.com)، فيستخدم Netlify محوّل Next.js تلقائياً. أضف متغيرات البيئة نفسها، و`BETTER_AUTH_URL` **إلزامي** هنا (رابط Netlify)، واجعل أمر البناء `npm run vercel-build` لتطبيق الـ migrations تلقائياً.
 
 ### التثبيت على الجوال
 

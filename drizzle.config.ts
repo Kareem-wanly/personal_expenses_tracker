@@ -1,5 +1,11 @@
 import { defineConfig } from "drizzle-kit";
 
+if (process.env.VERCEL && !process.env.DATABASE_URL?.startsWith("libsql://")) {
+  throw new Error(
+    "DATABASE_URL must be your Turso URL (libsql://...) — add it in Vercel → Settings → Environment Variables.",
+  );
+}
+
 const url = process.env.DATABASE_URL ?? "file:local.db";
 const authToken = process.env.DATABASE_AUTH_TOKEN;
 
