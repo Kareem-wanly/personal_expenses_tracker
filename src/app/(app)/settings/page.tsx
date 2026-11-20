@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { TabScreen } from "@/components/layout/tab-screen";
 import { CategoryManager } from "@/components/settings/category-manager";
 import { InstallApp } from "@/components/settings/install-app";
 import { NotificationSettings } from "@/components/settings/notification-settings";
@@ -18,7 +19,7 @@ export const metadata: Metadata = { title: "الإعدادات" };
 
 export default function SettingsPage() {
   return (
-    <>
+    <TabScreen>
       <PageHeader title="الإعدادات" />
       <div className="space-y-8">
         <Section title="الحساب">
@@ -54,7 +55,7 @@ export default function SettingsPage() {
           </Button>
         </form>
       </div>
-    </>
+    </TabScreen>
   );
 }
 
@@ -70,7 +71,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 async function Account() {
   const user = await requireUser();
   return (
-    <div className="rounded-2xl border bg-card p-4">
+    <div className="surface p-4">
       <p className="mb-4 truncate text-sm text-muted-foreground" dir="ltr">
         {user.email}
       </p>

@@ -51,7 +51,7 @@ export function CategoryManager({ categories }: { categories: Item[] }) {
 
   return (
     <div className="space-y-2">
-      <ul className="divide-y rounded-2xl border bg-card">
+      <ul className="divide-y divide-separator surface overflow-hidden">
         {categories.map((c) => (
           <li key={c.id} className="flex items-center gap-3 p-3">
             <CategoryIcon icon={c.icon} color={c.color} />

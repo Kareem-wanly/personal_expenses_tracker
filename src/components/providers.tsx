@@ -2,6 +2,7 @@
 
 import { DirectionProvider } from "@base-ui/react/direction-provider";
 import { SerwistProvider } from "@serwist/turbopack/react";
+import { MotionConfig } from "motion/react";
 import { ThemeProvider } from "next-themes";
 
 import { InstallBanner } from "@/components/install-banner";
@@ -15,9 +16,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <DirectionProvider direction="rtl">
-          {children}
-          <InstallBanner />
-          <Toaster position="top-center" richColors closeButton dir="rtl" />
+          {/* Honour the OS "reduce motion" setting in every animation. */}
+          <MotionConfig reducedMotion="user">
+            {children}
+            <InstallBanner />
+            <Toaster position="top-center" richColors closeButton dir="rtl" />
+          </MotionConfig>
         </DirectionProvider>
       </ThemeProvider>
     </SerwistProvider>

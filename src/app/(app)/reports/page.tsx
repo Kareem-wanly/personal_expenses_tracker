@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/empty-state";
 import { AddExpenseButton } from "@/components/expenses/add-expense-button";
 import { ExpenseItem } from "@/components/expenses/expense-item";
 import { PageHeader } from "@/components/layout/page-header";
+import { TabScreen } from "@/components/layout/tab-screen";
 import { MonthSwitcher } from "@/components/month-switcher";
 import {
   CategoryDonut,
@@ -25,12 +26,12 @@ export const metadata: Metadata = { title: "التقرير الشهري" };
 
 export default function ReportsPage({ searchParams }: PageProps<"/reports">) {
   return (
-    <>
+    <TabScreen>
       <PageHeader title="التقرير الشهري" />
       <Suspense fallback={<ReportSkeleton />}>
         <Report searchParams={searchParams} />
       </Suspense>
-    </>
+    </TabScreen>
   );
 }
 
@@ -139,7 +140,7 @@ async function Report({
 
           {/* Top expenses */}
           <Card title="أكبر 5 مصاريف">
-            <div className="-mx-2">
+            <div className="inset-list -mx-4 -mb-4">
               {r.top.map((e) => (
                 <ExpenseItem
                   key={e.id}
@@ -175,7 +176,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border bg-card p-4">
+    <section className="surface p-4">
       <h2 className="font-semibold">{title}</h2>
       {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
       <div className="mt-4">{children}</div>

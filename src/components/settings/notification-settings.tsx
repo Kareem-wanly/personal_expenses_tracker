@@ -101,7 +101,7 @@ export function NotificationSettings({ prefs: initialPrefs }: { prefs: Prefs }) 
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border bg-card p-4">
+    <div className="space-y-3 surface p-4">
       <DeviceStatus
         support={support}
         permission={permission}

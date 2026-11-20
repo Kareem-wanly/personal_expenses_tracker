@@ -6,6 +6,7 @@ import { AddExpenseButton } from "@/components/expenses/add-expense-button";
 import { ExpenseFilters } from "@/components/expenses/expense-filters";
 import { ExpenseItem } from "@/components/expenses/expense-item";
 import { PageHeader } from "@/components/layout/page-header";
+import { TabScreen } from "@/components/layout/tab-screen";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDayLabel, monthOf, normalizeMonth } from "@/lib/dates";
@@ -16,12 +17,12 @@ export const metadata: Metadata = { title: "المصاريف" };
 
 export default function ExpensesPage({ searchParams }: PageProps<"/expenses">) {
   return (
-    <>
+    <TabScreen>
       <PageHeader title="المصاريف" />
       <Suspense fallback={<ListSkeleton />}>
         <ExpensesContent searchParams={searchParams} />
       </Suspense>
-    </>
+    </TabScreen>
   );
 }
 
@@ -73,13 +74,13 @@ async function ExpensesContent({
         <div className="space-y-5">
           {data.groups.map((g) => (
             <section key={g.date} aria-label={formatDayLabel(g.date, today)}>
-              <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-background/90 px-5 py-2 text-xs font-medium text-muted-foreground backdrop-blur">
+              <div className="sticky top-[calc(env(safe-area-inset-top)+2.75rem)] z-10 -mx-4 flex items-center justify-between bg-background/90 px-5 py-2 text-xs font-medium text-muted-foreground backdrop-blur">
                 <span>{formatDayLabel(g.date, today)}</span>
                 <span className="tabular" dir="ltr">
                   {formatMoney(g.total, data.currency)}
                 </span>
               </div>
-              <div className="rounded-2xl border bg-card p-1.5">
+              <div className="surface inset-list overflow-hidden">
                 {g.items.map((e) => (
                   <ExpenseItem key={e.id} expense={e} currency={data.currency} />
                 ))}

@@ -7,17 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
+  --font-sans: var(--font-system);
+  --font-heading: var(--font-system);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -26,6 +17,7 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-separator: var(--separator);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -46,96 +38,117 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Design tokens — modelled on Apple's system colours and grouped surfaces.  */
+/*  Light: grouped grey canvas with white cards. Dark: true black canvas      */
+/*  with elevated greys.                                                      */
+/* -------------------------------------------------------------------------- */
+
 :root {
-  --background: oklch(0.985 0.002 160);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.56 0.14 163);
-  --primary-foreground: oklch(0.99 0.01 163);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.7 0.12 163);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* System UI font on Apple devices (SF Pro / SF Arabic), Plex elsewhere. */
+  --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Arabic",
+    var(--font-plex), system-ui, sans-serif;
+
+  --background: #f2f2f7;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: oklch(0.56 0.15 156);
+  --primary-foreground: #ffffff;
+  --secondary: #e9e9ee;
+  --secondary-foreground: #000000;
+  --muted: #ececf0;
+  --muted-foreground: #6e6e73;
+  --accent: #e9e9ee;
+  --accent-foreground: #000000;
+  --destructive: #e5372d;
+  --border: rgb(60 60 67 / 0.13);
+  --input: rgb(60 60 67 / 0.18);
+  --ring: oklch(0.56 0.15 156 / 0.55);
+  --separator: rgb(60 60 67 / 0.17);
+
+  /* Apple system palette, for charts and glyph tints. */
+  --chart-1: #0a84ff;
+  --chart-2: #30b85a;
+  --chart-3: #ff9f0a;
+  --chart-4: #bf5af2;
+  --chart-5: #ff375f;
+
+  /* Materials */
+  --glass: rgb(250 250 252 / 0.72);
+  --glass-border: rgb(0 0 0 / 0.07);
+  --glass-highlight: rgb(255 255 255 / 0.85);
+  --glass-shadow: 0 14px 40px -14px rgb(0 0 0 / 0.28), 0 2px 8px -2px rgb(0 0 0 / 0.08);
+  --surface-shadow: 0 1px 2px rgb(0 0 0 / 0.03);
+
+  --radius: 0.75rem;
+  /* Tabs read right → left: "forward" moves content to the right. */
+  --tab-dir: 1;
+  --tab-duration: 440ms;
+}
+
+:root[dir="ltr"] {
+  --tab-dir: -1;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.72 0.15 163);
-  --primary-foreground: oklch(0.2 0.03 163);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #1c1c1e;
+  --card-foreground: #ffffff;
+  --popover: #2c2c2e;
+  --popover-foreground: #ffffff;
+  --primary: oklch(0.76 0.18 152);
+  --primary-foreground: oklch(0.22 0.05 155);
+  --secondary: #2c2c2e;
+  --secondary-foreground: #ffffff;
+  --muted: #2c2c2e;
+  --muted-foreground: #98989f;
+  --accent: #2c2c2e;
+  --accent-foreground: #ffffff;
+  --destructive: #ff453a;
+  --border: rgb(255 255 255 / 0.1);
+  --input: rgb(255 255 255 / 0.15);
+  --ring: oklch(0.76 0.18 152 / 0.5);
+  --separator: rgb(84 84 88 / 0.6);
+
+  --chart-1: #0a84ff;
+  --chart-2: #30d158;
+  --chart-3: #ff9f0a;
+  --chart-4: #bf5af2;
+  --chart-5: #ff375f;
+
+  --glass: rgb(34 34 36 / 0.66);
+  --glass-border: rgb(255 255 255 / 0.09);
+  --glass-highlight: rgb(255 255 255 / 0.1);
+  --glass-shadow: 0 14px 40px -14px rgb(0 0 0 / 0.8), 0 2px 8px -2px rgb(0 0 0 / 0.4);
+  --surface-shadow: none;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
-  }
-}
-@layer base {
-  /* Mobile-app feel: no tap flash, safe-area aware, no rubber-band on body. */
-  html {
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Mobile-app feel: no rubber-band on the document itself. */
     overscroll-behavior-y: none;
   }
   body {
+    @apply bg-background text-foreground;
     min-height: 100dvh;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 28%, transparent);
   }
   input[type="search"]::-webkit-search-cancel-button {
     -webkit-appearance: none;
@@ -144,6 +157,67 @@
   input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
+  }
+}
+
+/* --------------------------------- Surfaces -------------------------------- */
+
+/** Translucent material for floating chrome (tab bar, pills, peeks). */
+@utility glass {
+  background-color: var(--glass);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    inset 0 0 0 0.5px var(--glass-border),
+    inset 0 1px 0 0 var(--glass-highlight),
+    var(--glass-shadow);
+}
+
+/** Edge-to-edge bar material (navigation bar). */
+@utility glass-bar {
+  background-color: var(--glass);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 0.5px 0 0 var(--separator);
+}
+
+/** Grouped content card. */
+@utility surface {
+  background-color: var(--card);
+  border-radius: 22px;
+  box-shadow: var(--surface-shadow);
+}
+
+/** Filled tint button with a soft coloured glow. */
+@utility tint-button {
+  color: var(--primary-foreground);
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--primary) 82%, white),
+    var(--primary)
+  );
+  box-shadow:
+    0 12px 28px -10px color-mix(in oklab, var(--primary) 75%, transparent),
+    inset 0 1px 0 0 rgb(255 255 255 / 0.3);
+}
+
+/** Gentle press feedback for tappable cards and rows. */
+@utility pressable {
+  transition:
+    transform 220ms var(--ease-ios),
+    background-color 150ms ease;
+  &:active {
+    transform: scale(0.975);
+  }
+}
+
+/**
+ * iOS inset-grouped list: rows separated by hairlines that start after the
+ * leading icon. Put `.list-row-body` on the part of the row that carries it.
+ */
+@utility inset-list {
+  & > * + * .list-row-body {
+    box-shadow: inset 0 0.5px 0 0 var(--separator);
   }
 }
 
@@ -157,4 +231,99 @@
 
 @utility tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* ----------------------------- View transitions ---------------------------- */
+
+::view-transition {
+  /* Let taps reach the live page while a transition plays. */
+  pointer-events: none;
+  /*
+   * React shrinks this overlay to width 0 while keeping `inset: 0`. In an
+   * RTL document that over-constrained box is anchored by `right`, which
+   * shifts every snapshot a full screen to the right. Freeing `right`
+   * anchors it to the left edge, where snapshot positions are measured
+   * from. (`direction: ltr` here does not help: the containing block's
+   * direction decides.)
+   */
+  right: auto;
+}
+
+/*
+ * Pager-style tab switch: the old screen leaves the way the finger moves,
+ * the next one follows it in. Swipes hand over mid-gesture: the old
+ * snapshot is captured at the finger's offset and continues from there.
+ */
+::view-transition-old(.tab-forward) {
+  --tab-to: calc(var(--tab-dir) * 100%);
+  animation: var(--tab-duration) var(--ease-ios) both tab-out;
+}
+::view-transition-new(.tab-forward) {
+  --tab-from: calc(var(--tab-dir) * -100%);
+  animation: var(--tab-duration) var(--ease-ios) both tab-in;
+}
+::view-transition-old(.tab-back) {
+  --tab-to: calc(var(--tab-dir) * -100%);
+  animation: var(--tab-duration) var(--ease-ios) both tab-out;
+}
+::view-transition-new(.tab-back) {
+  --tab-from: calc(var(--tab-dir) * 100%);
+  animation: var(--tab-duration) var(--ease-ios) both tab-in;
+}
+
+@keyframes tab-out {
+  to {
+    translate: var(--tab-to) 0;
+    opacity: 0.6;
+  }
+}
+@keyframes tab-in {
+  from {
+    translate: var(--tab-from) 0;
+  }
+}
+
+/* Chrome stays put while screens move under it. */
+::view-transition-group(tab-bar),
+::view-transition-group(nav-bar) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(tab-bar),
+::view-transition-old(nav-bar) {
+  display: none;
+}
+::view-transition-new(tab-bar),
+::view-transition-new(nav-bar) {
+  animation: none;
+}
+
+/* Content arriving after a skeleton: rise and un-blur, Apple-style. */
+::view-transition-old(.reveal-out) {
+  animation: 140ms ease-out both reveal-fade reverse;
+}
+::view-transition-new(.reveal-in) {
+  animation:
+    260ms ease-out 80ms both reveal-fade,
+    420ms var(--ease-ios) both reveal-rise;
+}
+@keyframes reveal-fade {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+@keyframes reveal-rise {
+  from {
+    translate: 0 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
 }

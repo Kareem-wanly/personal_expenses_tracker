@@ -29,7 +29,7 @@ export function MonthSwitcher({
   const btn = cn(buttonVariants({ variant: "outline", size: "icon-lg" }), "rounded-full");
 
   return (
-    <div className="flex items-center justify-between gap-2 rounded-2xl border bg-card p-1.5">
+    <div className="flex items-center justify-between gap-2 surface p-1.5">
       {/* RTL: "previous" sits on the right and points right. */}
       <Link href={href(shiftMonth(month, -1))} className={btn} aria-label="الشهر السابق">
         <ChevronRightIcon />

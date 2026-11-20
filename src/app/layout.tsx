@@ -6,7 +6,7 @@ import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants";
 import "./globals.css";
 
 const font = IBM_Plex_Sans_Arabic({
-  variable: "--font-sans",
+  variable: "--font-plex",
   subsets: ["arabic", "latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
@@ -33,8 +33,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8faf9" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -46,7 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="ar"
       dir="rtl"
-      className={`${font.variable} h-full antialiased`}
+      className={`${font.variable} h-full`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
