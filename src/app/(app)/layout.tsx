@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { ExpenseContextMenu } from "@/components/expenses/expense-context-menu";
 import { ExpenseFormDrawer } from "@/components/expenses/expense-form-drawer";
 import { NavBar } from "@/components/layout/nav-bar";
 import { OfflineBanner } from "@/components/layout/offline-banner";
@@ -24,6 +25,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         <Suspense fallback={null}>
           <ExpenseFormLoader />
         </Suspense>
+        <ExpenseContextMenu />
         <TzSync />
       </div>
     </TabNavProvider>

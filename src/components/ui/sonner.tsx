@@ -33,12 +33,15 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
+          "--border-radius": "16px",
         } as React.CSSProperties
       }
       toastOptions={{
         classNames: {
           toast: "cn-toast",
+          // Inline action (e.g. "Undo") as a small tint capsule.
+          actionButton:
+            "!h-7 !rounded-full !bg-primary !px-3 !text-[13px] !font-semibold !text-primary-foreground",
         },
       }}
       {...props}
