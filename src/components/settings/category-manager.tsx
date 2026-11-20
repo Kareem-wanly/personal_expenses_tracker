@@ -1,7 +1,8 @@
 "use client";
 
-import { Loader2Icon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { CheckIcon, Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useActionState, useEffect, useEffectEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { CategoryIcon } from "@/components/category-icon";
@@ -16,17 +17,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
+import { Group, RowButton } from "@/components/ui/grouped-list";
 import { CATEGORY_COLORS, CATEGORY_ICONS } from "@/lib/constants";
+import { formatNumber } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import type { ActionState } from "@/lib/validations";
 import { deleteCategory, saveCategory } from "@/server/actions";
 
@@ -37,6 +32,8 @@ type Item = {
   color: string;
   expenseCount: number;
 };
+
+const SPRING = { type: "spring", stiffness: 520, damping: 30 } as const;
 
 export function CategoryManager({ categories }: { categories: Item[] }) {
   const [editing, setEditing] = useState<Item | null>(null);
@@ -50,148 +47,220 @@ export function CategoryManager({ categories }: { categories: Item[] }) {
   }
 
   return (
-    <div className="space-y-2">
-      <ul className="divide-y divide-separator surface overflow-hidden">
+    <>
+      <Group header="التصنيفات" footer="حذف التصنيف لا يحذف مصاريفه؛ تصبح «غير مصنّفة».">
         {categories.map((c) => (
-          <li key={c.id} className="flex items-center gap-3 p-3">
-            <CategoryIcon icon={c.icon} color={c.color} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{c.name}</p>
-              <p className="text-xs text-muted-foreground">{c.expenseCount} مصروف</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon-lg"
-              aria-label={`تعديل ${c.name}`}
-              onClick={() => openForm(c)}
-            >
-              <PencilIcon />
-            </Button>
-            <DeleteCategory item={c} />
-          </li>
+          <RowButton
+            key={c.id}
+            onClick={() => openForm(c)}
+            leading={<CategoryIcon icon={c.icon} color={c.color} className="size-[30px] rounded-[8px] text-[16px]" />}
+            title={c.name}
+            trailing={
+              <span className="text-[15px] text-muted-foreground tabular">
+                {formatNumber(c.expenseCount)}
+              </span>
+            }
+            chevron
+          />
         ))}
-      </ul>
+        <RowButton
+          onClick={() => openForm(null)}
+          className="text-primary"
+          leading={
+            <span className="flex size-[30px] items-center justify-center rounded-[8px] bg-primary/12 text-primary">
+              <PlusIcon className="size-[18px]" strokeWidth={2.4} />
+            </span>
+          }
+          title="إضافة تصنيف"
+        />
+      </Group>
 
-      <Button variant="outline" className="h-11 w-full" onClick={() => openForm(null)}>
-        <PlusIcon />
-        إضافة تصنيف
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? "تعديل التصنيف" : "تصنيف جديد"}</DialogTitle>
-            <DialogDescription className="sr-only">
-              اختر اسماً وأيقونة ولوناً للتصنيف
-            </DialogDescription>
-          </DialogHeader>
-          <CategoryForm key={formKey} item={editing} onDone={() => setOpen(false)} />
-        </DialogContent>
-      </Dialog>
-    </div>
+      <Drawer open={open} onOpenChange={setOpen} showSwipeHandle>
+        <DrawerContent className="mx-auto max-w-2xl border-t-0 bg-background data-[swipe-direction=down]:rounded-t-[28px] dark:bg-[#1c1c1e] dark:[--card:#2c2c2e]">
+          <CategoryForm
+            key={formKey}
+            item={editing}
+            onDone={() => setOpen(false)}
+          />
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 }
 
 function CategoryForm({ item, onDone }: { item: Item | null; onDone: () => void }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(
-    saveCategory,
-    { ok: false },
-  );
+  const [state, action, pending] = useActionState<ActionState, FormData>(saveCategory, {
+    ok: false,
+  });
   const [icon, setIcon] = useState(item?.icon ?? CATEGORY_ICONS[0]);
   const [color, setColor] = useState(item?.color ?? CATEGORY_COLORS[0]);
+  const [name, setName] = useState(item?.name ?? "");
 
-  useEffect(() => {
-    if (state.ok) {
-      toast.success(state.message);
+  // React to each new action result once (onDone is a fresh closure per render).
+  const onResult = useEffectEvent((result: ActionState) => {
+    if (result.ok) {
+      navigator.vibrate?.(10);
+      toast.success(result.message);
       onDone();
-    } else if (state.message && !state.fieldErrors) {
-      toast.error(state.message);
+    } else if (result.message && !result.fieldErrors) {
+      toast.error(result.message);
     }
-  }, [state, onDone]);
+  });
+  useEffect(() => onResult(state), [state]);
 
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} className="flex min-h-0 flex-1 flex-col">
       {item && <input type="hidden" name="id" value={item.id} />}
       <input type="hidden" name="icon" value={icon} />
       <input type="hidden" name="color" value={color} />
 
-      <div className="flex items-center gap-3">
-        <CategoryIcon icon={icon} color={color} className="size-12 text-2xl" />
-        <div className="flex-1 space-y-1">
-          <Label htmlFor="cat-name">الاسم</Label>
-          <Input
+      <div className="relative flex h-11 shrink-0 items-center justify-between px-4">
+        <button type="button" onClick={onDone} className="text-[17px] text-primary active:opacity-50">
+          إلغاء
+        </button>
+        <DrawerTitle className="pointer-events-none absolute inset-x-0 text-center text-[17px] font-semibold">
+          {item ? "تعديل التصنيف" : "تصنيف جديد"}
+        </DrawerTitle>
+        <DrawerDescription className="sr-only">اختر اسماً وأيقونة ولوناً للتصنيف</DrawerDescription>
+        {item ? <DeleteCategory item={item} onDeleted={onDone} /> : <span className="w-8" />}
+      </div>
+
+      <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 pb-4">
+        {/* Live preview */}
+        <div className="flex flex-col items-center gap-2 pt-2">
+          <motion.span
+            key={`${icon}-${color}`}
+            initial={{ scale: 0.85 }}
+            animate={{ scale: 1 }}
+            transition={SPRING}
+            className="flex size-20 items-center justify-center rounded-[22px] text-[40px] shadow-[0_14px_30px_-12px_var(--tile)]"
+            style={{ backgroundColor: color, ["--tile" as string]: color }}
+          >
+            {icon}
+          </motion.span>
+          <span className="text-[13px] text-muted-foreground">{name || "اسم التصنيف"}</span>
+        </div>
+
+        <div className="surface px-4">
+          <label htmlFor="cat-name" className="sr-only">
+            الاسم
+          </label>
+          <input
             id="cat-name"
             name="name"
-            defaultValue={item?.name}
             required
             maxLength={30}
-            className="h-11"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="اسم التصنيف"
             aria-invalid={!!state.fieldErrors?.name}
+            className="h-12 w-full bg-transparent text-center text-[17px] font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground"
           />
         </div>
-      </div>
-      {state.fieldErrors?.name && (
-        <p className="text-sm text-destructive">{state.fieldErrors.name[0]}</p>
-      )}
-
-      <fieldset>
-        <legend className="mb-2 text-sm font-medium">الأيقونة</legend>
-        <div className="grid grid-cols-8 gap-1">
-          {CATEGORY_ICONS.map((i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setIcon(i)}
-              aria-pressed={icon === i}
-              className="flex aspect-square items-center justify-center rounded-lg text-xl transition-colors hover:bg-muted aria-pressed:bg-primary/15 aria-pressed:ring-2 aria-pressed:ring-primary"
+        <AnimatePresence>
+          {state.fieldErrors?.name && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="-mt-3 text-center text-[13px] text-destructive"
             >
-              {i}
-            </button>
-          ))}
-        </div>
-      </fieldset>
+              {state.fieldErrors.name[0]}
+            </motion.p>
+          )}
+        </AnimatePresence>
 
-      <fieldset>
-        <legend className="mb-2 text-sm font-medium">اللون</legend>
-        <div className="flex flex-wrap gap-2">
-          {CATEGORY_COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setColor(c)}
-              aria-label={c}
-              aria-pressed={color === c}
-              className="size-8 rounded-full ring-offset-2 ring-offset-background transition-transform aria-pressed:scale-110 aria-pressed:ring-2 aria-pressed:ring-foreground"
-              style={{ backgroundColor: c }}
-            />
-          ))}
-        </div>
-      </fieldset>
+        <fieldset>
+          <legend className="mb-2 px-1 text-[13px] font-medium text-muted-foreground">اللون</legend>
+          <div className="surface grid grid-cols-6 place-items-center gap-y-3 p-4">
+            {CATEGORY_COLORS.map((c) => {
+              const selected = color === c;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  aria-label={`اللون ${c}`}
+                  aria-pressed={selected}
+                  className="relative flex size-9 items-center justify-center rounded-full transition-transform active:scale-90"
+                  style={{ backgroundColor: c }}
+                >
+                  {selected && (
+                    <motion.span
+                      layoutId="color-ring"
+                      transition={SPRING}
+                      className="absolute -inset-[5px] rounded-full border-[2.5px]"
+                      style={{ borderColor: c }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
 
-      <Button type="submit" className="h-11 w-full" disabled={pending}>
-        {pending && <Loader2Icon className="animate-spin" />}
-        حفظ
-      </Button>
+        <fieldset>
+          <legend className="mb-2 px-1 text-[13px] font-medium text-muted-foreground">الأيقونة</legend>
+          <div className="surface grid grid-cols-6 gap-1.5 p-3">
+            {CATEGORY_ICONS.map((i) => {
+              const selected = icon === i;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setIcon(i)}
+                  aria-pressed={selected}
+                  className={cn(
+                    "relative flex aspect-square items-center justify-center rounded-[12px] text-[24px] transition-transform active:scale-90",
+                  )}
+                >
+                  {selected && (
+                    <motion.span
+                      layoutId="icon-tile"
+                      transition={SPRING}
+                      className="absolute inset-0 rounded-[12px]"
+                      style={{ backgroundColor: `${color}2e` }}
+                    />
+                  )}
+                  <span className="relative">{i}</span>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      </div>
+
+      <div className="shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+        <motion.button
+          type="submit"
+          disabled={pending}
+          whileTap={{ scale: 0.97 }}
+          transition={SPRING}
+          className="tint-button flex h-[52px] w-full items-center justify-center gap-2 rounded-full text-[17px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
+        >
+          {pending ? <Loader2Icon className="size-5 animate-spin" /> : <CheckIcon className="size-5" strokeWidth={2.6} />}
+          {item ? "حفظ التعديلات" : "إضافة التصنيف"}
+        </motion.button>
+      </div>
     </form>
   );
 }
 
-function DeleteCategory({ item }: { item: Item }) {
+function DeleteCategory({ item, onDeleted }: { item: Item; onDeleted: () => void }) {
   const [pending, startTransition] = useTransition();
   return (
     <AlertDialog>
       <AlertDialogTrigger
         render={
-          <Button
-            variant="ghost"
-            size="icon-lg"
-            className="text-destructive hover:text-destructive"
+          <button
+            type="button"
             aria-label={`حذف ${item.name}`}
             disabled={pending}
+            className="flex size-8 items-center justify-center rounded-full text-destructive active:opacity-50"
           />
         }
       >
-        {pending ? <Loader2Icon className="animate-spin" /> : <Trash2Icon />}
+        {pending ? <Loader2Icon className="size-5 animate-spin" /> : <Trash2Icon className="size-5" />}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -209,7 +278,9 @@ function DeleteCategory({ item }: { item: Item }) {
             onClick={() =>
               startTransition(async () => {
                 const res = await deleteCategory(item.id);
+                navigator.vibrate?.(10);
                 toast.success(res.message);
+                onDeleted();
               })
             }
           >

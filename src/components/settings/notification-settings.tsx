@@ -1,10 +1,18 @@
 "use client";
 
-import { BellIcon, BellOffIcon, Loader2Icon, SendIcon } from "lucide-react";
+import {
+  BellIcon,
+  CalendarClockIcon,
+  type LucideIcon,
+  Loader2Icon,
+  MoonStarIcon,
+  SendIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 import { useState, useSyncExternalStore, useTransition } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Group, Row, RowButton, RowIcon } from "@/components/ui/grouped-list";
 import { Switch } from "@/components/ui/switch";
 import {
   type PushSupport,
@@ -24,19 +32,31 @@ type Prefs = {
   notifyMonthlySummary: boolean;
 };
 
-const PREF_ITEMS: { key: keyof Prefs; title: string; description: string }[] = [
+const PREF_ITEMS: {
+  key: keyof Prefs;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  tint: string;
+}[] = [
   {
     key: "notifyBudget",
+    icon: TriangleAlertIcon,
+    tint: "#ff9f0a",
     title: "تنبيهات الميزانية",
     description: "عند الوصول إلى 80% من الميزانية وعند تجاوزها.",
   },
   {
     key: "notifyDailyReminder",
+    icon: MoonStarIcon,
+    tint: "#5e5ce6",
     title: "تذكير يومي مسائي",
     description: "فقط إذا لم تسجّل أي مصروف في ذلك اليوم.",
   },
   {
     key: "notifyMonthlySummary",
+    icon: CalendarClockIcon,
+    tint: "#30b0c7",
     title: "الملخص الشهري",
     description: "في أول كل شهر: كم صرفت ومقارنة بالشهر السابق.",
   },
@@ -97,115 +117,100 @@ export function NotificationSettings({ prefs: initialPrefs }: { prefs: Prefs }) 
   }
 
   if (!mounted || support === "loading") {
-    return <div className="h-24 animate-pulse rounded-2xl bg-muted" />;
+    return <div className="h-48 animate-pulse rounded-[22px] bg-foreground/[0.07] dark:bg-white/[0.09]" />;
   }
 
-  return (
-    <div className="space-y-3 surface p-4">
-      <DeviceStatus
-        support={support}
-        permission={permission}
-        subscribed={!!subscription}
-        configured={!!VAPID_PUBLIC_KEY}
-        pending={pending}
-        onEnable={enable}
-        onDisable={disable}
-        onTest={test}
-      />
+  const ready = support === "supported" && !!VAPID_PUBLIC_KEY && permission !== "denied";
 
-      <ul className="divide-y border-t pt-1">
-        {PREF_ITEMS.map((item) => (
-          <li key={item.key} className="flex items-center justify-between gap-4 py-3">
-            <label htmlFor={item.key} className="min-w-0 cursor-pointer">
-              <p className="font-medium">{item.title}</p>
-              <p className="text-xs text-muted-foreground">{item.description}</p>
-            </label>
+  return (
+    <Group
+      header="الإشعارات"
+      footer={
+        <DeviceHint
+          support={support}
+          permission={permission}
+          configured={!!VAPID_PUBLIC_KEY}
+          subscribed={!!subscription}
+        />
+      }
+    >
+      {ready && (
+        <Row
+          leading={<RowIcon icon={BellIcon} tint="#ff3b30" />}
+          title="هذا الجهاز"
+          subtitle={subscription ? "الإشعارات مفعّلة" : "الإشعارات متوقفة"}
+          trailing={
+            pending ? (
+              <Loader2Icon className="size-5 animate-spin text-muted-foreground" />
+            ) : (
+              <Switch
+                checked={!!subscription}
+                onCheckedChange={(on) => (on ? enable() : disable())}
+                aria-label="الإشعارات على هذا الجهاز"
+              />
+            )
+          }
+        />
+      )}
+      {PREF_ITEMS.map((item) => (
+        <Row
+          key={item.key}
+          leading={<RowIcon icon={item.icon} tint={item.tint} />}
+          title={<label htmlFor={item.key}>{item.title}</label>}
+          subtitle={item.description}
+          trailing={
             <Switch
               id={item.key}
+              aria-label={item.title}
               checked={prefs[item.key]}
               onCheckedChange={(v) => togglePref(item.key, v)}
             />
-          </li>
-        ))}
-      </ul>
-    </div>
+          }
+        />
+      ))}
+      {subscription && (
+        <RowButton
+          onClick={test}
+          disabled={pending}
+          className="text-primary"
+          leading={<RowIcon icon={SendIcon} tint="#0a84ff" />}
+          title="إرسال إشعار تجريبي"
+        />
+      )}
+    </Group>
   );
 }
 
-function DeviceStatus({
+/** Why notifications can't be turned on here, in the group footer. */
+function DeviceHint({
   support,
   permission,
-  subscribed,
   configured,
-  pending,
-  onEnable,
-  onDisable,
-  onTest,
+  subscribed,
 }: {
   support: PushSupport;
   permission: NotificationPermission;
-  subscribed: boolean;
   configured: boolean;
-  pending: boolean;
-  onEnable: () => void;
-  onDisable: () => void;
-  onTest: () => void;
+  subscribed: boolean;
 }) {
-  const spinner = pending && <Loader2Icon className="animate-spin" />;
-
   if (support === "ios-needs-install") {
     return (
-      <Hint>
-        على آيفون: ثبّت التطبيق أولاً (مشاركة ← «إضافة إلى الشاشة الرئيسية») ثم افتحه
-        من الأيقونة لتفعيل الإشعارات. يتطلب iOS 16.4 أو أحدث.
-      </Hint>
+      <>
+        على آيفون: ثبّت التطبيق أولاً (مشاركة ← «إضافة إلى الشاشة الرئيسية») ثم افتحه من
+        الأيقونة لتفعيل الإشعارات. يتطلب iOS 16.4 أو أحدث.
+      </>
     );
   }
-  if (support === "unsupported") {
-    return <Hint>هذا المتصفح لا يدعم الإشعارات.</Hint>;
-  }
-  if (support === "no-sw") {
-    return <Hint>الإشعارات متاحة في النسخة المنشورة من التطبيق فقط.</Hint>;
-  }
-  if (!configured) {
-    return <Hint>الإشعارات غير مهيّأة على الخادم بعد (مفاتيح VAPID).</Hint>;
-  }
+  if (support === "unsupported") return <>هذا المتصفح لا يدعم الإشعارات.</>;
+  if (support === "no-sw") return <>الإشعارات متاحة في النسخة المنشورة من التطبيق فقط.</>;
+  if (!configured) return <>الإشعارات غير مهيّأة على الخادم بعد (مفاتيح VAPID).</>;
   if (permission === "denied") {
     return (
-      <Hint>
-        الإشعارات محظورة لهذا الموقع. فعّلها من إعدادات المتصفح (أيقونة القفل بجانب
-        الرابط ← الإشعارات ← سماح) ثم أعد فتح الصفحة.
-      </Hint>
+      <>
+        الإشعارات محظورة لهذا الموقع. فعّلها من إعدادات المتصفح (أيقونة القفل بجانب الرابط ←
+        الإشعارات ← سماح) ثم أعد فتح الصفحة.
+      </>
     );
   }
-  if (subscribed) {
-    return (
-      <div className="space-y-3">
-        <p className="flex items-center gap-2 text-sm font-medium text-primary">
-          <BellIcon className="size-4" />
-          الإشعارات مفعّلة على هذا الجهاز
-        </p>
-        <div className="flex gap-2">
-          <Button variant="outline" className="h-10 flex-1" onClick={onTest} disabled={pending}>
-            {spinner || <SendIcon />}
-            إشعار تجريبي
-          </Button>
-          <Button variant="ghost" className="h-10" onClick={onDisable} disabled={pending}>
-            <BellOffIcon />
-            إيقاف
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <Button className="h-11 w-full" onClick={onEnable} disabled={pending}>
-      {spinner || <BellIcon />}
-      تفعيل الإشعارات على هذا الجهاز
-    </Button>
-  );
-}
-
-function Hint({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{children}</p>;
+  return subscribed ? <>تصلك التنبيهات المهمة فقط، بدون إزعاج.</> : null;
 }

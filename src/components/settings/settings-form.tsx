@@ -1,16 +1,17 @@
 "use client";
 
-import { Loader2Icon } from "lucide-react";
-import { useActionState, useEffect } from "react";
+import { ChevronsUpDownIcon, CoinsIcon, Loader2Icon, PiggyBankIcon, UserIcon } from "lucide-react";
+import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Group, Row, RowButton, RowIcon } from "@/components/ui/grouped-list";
 import { CURRENCIES } from "@/lib/constants";
 import { fromMinor } from "@/lib/money";
 import type { ActionState } from "@/lib/validations";
 import { saveSettings } from "@/server/actions";
+
+const field =
+  "h-9 w-full min-w-0 bg-transparent text-[16px] text-muted-foreground outline-none placeholder:text-muted-foreground/60 focus:text-foreground";
 
 export function SettingsForm({
   name,
@@ -21,10 +22,19 @@ export function SettingsForm({
   currency: string;
   monthlyBudget: number | null;
 }) {
-  const [state, action, pending] = useActionState<ActionState, FormData>(
-    saveSettings,
-    { ok: false },
-  );
+  const [state, action, pending] = useActionState<ActionState, FormData>(saveSettings, {
+    ok: false,
+  });
+  const initial = {
+    name,
+    currency,
+    budget: monthlyBudget != null ? String(fromMinor(monthlyBudget)) : "",
+  };
+  const [values, setValues] = useState(initial);
+  const dirty =
+    values.name !== initial.name ||
+    values.currency !== initial.currency ||
+    values.budget !== initial.budget;
 
   useEffect(() => {
     if (state.ok) toast.success(state.message);
@@ -32,54 +42,97 @@ export function SettingsForm({
   }, [state]);
 
   const errors = state.fieldErrors ?? {};
+  const set = (key: keyof typeof values) => (e: { target: { value: string } }) =>
+    setValues((v) => ({ ...v, [key]: e.target.value }));
 
   return (
-    <form action={action} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">الاسم</Label>
-        <Input id="name" name="name" defaultValue={name} required maxLength={50} className="h-11" />
-        {errors.name && <p className="text-sm text-destructive">{errors.name[0]}</p>}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="currency">العملة</Label>
-        <select
-          id="currency"
-          name="currency"
-          defaultValue={currency}
-          className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-        >
-          {CURRENCIES.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.label} ({c.code})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="monthlyBudget">الميزانية الشهرية</Label>
-        <Input
-          id="monthlyBudget"
-          name="monthlyBudget"
-          inputMode="decimal"
-          dir="ltr"
-          placeholder="اتركه فارغاً لإلغاء الميزانية"
-          defaultValue={monthlyBudget != null ? String(fromMinor(monthlyBudget)) : ""}
-          className="h-11 text-start"
+    <form action={action}>
+      <Group
+        header="الحساب"
+        footer={
+          errors.name?.[0] ?? errors.monthlyBudget?.[0] ?? "اترك الميزانية فارغة لإلغائها. سننبّهك عند 80% منها."
+        }
+      >
+        <Row
+          leading={<RowIcon icon={UserIcon} tint="#8e8e93" />}
+          title={<label htmlFor="name">الاسم</label>}
+          trailing={
+            <input
+              id="name"
+              name="name"
+              required
+              maxLength={50}
+              value={values.name}
+              onChange={set("name")}
+              className={`${field} max-w-[55%] text-end`}
+            />
+          }
         />
-        {errors.monthlyBudget && (
-          <p className="text-sm text-destructive">{errors.monthlyBudget[0]}</p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          سننبّهك بصرياً عند اقترابك من تجاوزها.
-        </p>
-      </div>
+        <Row
+          leading={<RowIcon icon={CoinsIcon} tint="#ff9f0a" />}
+          title={<label htmlFor="currency">العملة</label>}
+          trailing={
+            <span className="relative flex items-center gap-1 text-muted-foreground">
+              <select
+                id="currency"
+                name="currency"
+                value={values.currency}
+                onChange={set("currency")}
+                className="h-9 appearance-none bg-transparent pe-5 text-end text-[16px] outline-none"
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label} ({c.code})
+                  </option>
+                ))}
+              </select>
+              <ChevronsUpDownIcon className="pointer-events-none absolute end-0 size-4 opacity-60" />
+            </span>
+          }
+        />
+        <Row
+          leading={<RowIcon icon={PiggyBankIcon} tint="#34c759" />}
+          title={<label htmlFor="monthlyBudget">الميزانية الشهرية</label>}
+          trailing={
+            <input
+              id="monthlyBudget"
+              name="monthlyBudget"
+              inputMode="decimal"
+              dir="ltr"
+              placeholder="بدون"
+              value={values.budget}
+              onChange={set("budget")}
+              aria-invalid={!!errors.monthlyBudget}
+              className={`${field} max-w-[40%] text-left tabular`}
+            />
+          }
+        />
+      </Group>
 
-      <Button type="submit" className="h-11 w-full" disabled={pending}>
-        {pending && <Loader2Icon className="animate-spin" />}
-        حفظ
-      </Button>
+      {/* Appears only when something changed, like an iOS "Done" button. */}
+      <div
+        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+          dirty || pending ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        }`}
+        aria-hidden={!dirty && !pending}
+      >
+        <div className="overflow-hidden pt-4">
+          <Group>
+            <RowButton
+              type="submit"
+              disabled={pending || !dirty}
+              center
+              className="font-semibold text-primary"
+              title={
+                <span className="flex items-center gap-2">
+                  {pending && <Loader2Icon className="size-4 animate-spin" />}
+                  حفظ التغييرات
+                </span>
+              }
+            />
+          </Group>
+        </div>
+      </div>
     </form>
   );
 }

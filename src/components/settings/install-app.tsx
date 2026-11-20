@@ -1,42 +1,58 @@
 "use client";
 
-import { DownloadIcon, ShareIcon } from "lucide-react";
+import { CheckIcon, DownloadIcon, ShareIcon, SmartphoneIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Group, Row, RowButton, RowIcon } from "@/components/ui/grouped-list";
 import { promptInstall, useInstallPrompt } from "@/lib/install-prompt";
 
-/** Native install button (Android/desktop) or iOS instructions. */
+/** Native install row (Android/desktop), or how to add it on iOS. */
 export function InstallApp() {
   const { mounted, installed, canPrompt, ios } = useInstallPrompt();
 
   if (!mounted) return null;
+
   if (installed) {
-    return <p className="text-sm text-muted-foreground">✅ التطبيق مثبّت على جهازك.</p>;
+    return (
+      <Group header="التطبيق">
+        <Row
+          leading={<RowIcon icon={SmartphoneIcon} tint="#34c759" />}
+          title="مثبّت على هذا الجهاز"
+          trailing={<CheckIcon className="size-5 text-primary" strokeWidth={2.6} />}
+        />
+      </Group>
+    );
   }
+
   if (canPrompt) {
     return (
-      <Button
-        className="h-11 w-full"
-        onClick={async () => {
-          if (await promptInstall()) toast.success("تم تثبيت التطبيق 🎉");
-        }}
-      >
-        <DownloadIcon />
-        تثبيت التطبيق على الجهاز
-      </Button>
+      <Group header="التطبيق" footer="يفتح بشاشة كاملة مثل أي تطبيق، ويعمل بدون إنترنت.">
+        <RowButton
+          onClick={async () => {
+            if (await promptInstall()) toast.success("تم تثبيت التطبيق 🎉");
+          }}
+          className="text-primary"
+          leading={<RowIcon icon={DownloadIcon} tint="#0a84ff" />}
+          title="تثبيت التطبيق على الجهاز"
+        />
+      </Group>
     );
   }
-  if (ios) {
-    return (
-      <p className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
-        في Safari اضغط <ShareIcon className="inline size-4" /> ثم «إضافة إلى الشاشة الرئيسية».
-      </p>
-    );
-  }
+
   return (
-    <p className="text-sm text-muted-foreground">
-      افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».
-    </p>
+    <Group
+      header="التطبيق"
+      footer={
+        ios ? (
+          <span className="inline-flex flex-wrap items-center gap-1">
+            في Safari اضغط <ShareIcon className="inline size-3.5" /> ثم «إضافة إلى الشاشة الرئيسية».
+          </span>
+        ) : (
+          "افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»."
+        )
+      }
+    >
+      <Row leading={<RowIcon icon={SmartphoneIcon} tint="#0a84ff" />} title="ثبّت التطبيق على شاشتك الرئيسية" />
+    </Group>
   );
 }

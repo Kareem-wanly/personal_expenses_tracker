@@ -4,13 +4,15 @@ import { Suspense } from "react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { TabScreen } from "@/components/layout/tab-screen";
+import { Reveal } from "@/components/motion/reveal";
 import { CategoryManager } from "@/components/settings/category-manager";
 import { InstallApp } from "@/components/settings/install-app";
 import { NotificationSettings } from "@/components/settings/notification-settings";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { ThemeSwitcher } from "@/components/settings/theme-switcher";
-import { Button } from "@/components/ui/button";
+import { Group, RowButton } from "@/components/ui/grouped-list";
 import { Skeleton } from "@/components/ui/skeleton";
+import { APP_NAME } from "@/lib/constants";
 import { requireUser } from "@/lib/dal";
 import { signOutAction } from "@/server/actions";
 import { getCategoriesWithUsage } from "@/server/queries";
@@ -21,66 +23,73 @@ export default function SettingsPage() {
   return (
     <TabScreen>
       <PageHeader title="الإعدادات" />
-      <div className="space-y-8">
-        <Section title="الحساب">
-          <Suspense fallback={<Skeleton className="h-72 rounded-2xl" />}>
-            <Account />
-          </Suspense>
-        </Section>
+      <div className="space-y-7">
+        <Suspense fallback={<Skeleton className="h-[260px] rounded-[22px]" />}>
+          <Account />
+        </Suspense>
 
-        <Section title="التصنيفات">
-          <Suspense fallback={<Skeleton className="h-96 rounded-2xl" />}>
+        <Suspense fallback={<Skeleton className="h-96 rounded-[22px]" />}>
+          <Reveal index={1}>
             <Categories />
-          </Suspense>
-        </Section>
+          </Reveal>
+        </Suspense>
 
-        <Section title="الإشعارات">
-          <Suspense fallback={<Skeleton className="h-64 rounded-2xl" />}>
+        <Suspense fallback={<Skeleton className="h-64 rounded-[22px]" />}>
+          <Reveal index={2}>
             <Notifications />
-          </Suspense>
-        </Section>
+          </Reveal>
+        </Suspense>
 
-        <Section title="المظهر">
+        <Reveal index={3}>
           <ThemeSwitcher />
-        </Section>
+        </Reveal>
 
-        <Section title="التطبيق">
+        <Reveal index={4}>
           <InstallApp />
-        </Section>
+        </Reveal>
 
-        <form action={signOutAction}>
-          <Button type="submit" variant="destructive" className="h-11 w-full">
-            <LogOutIcon />
-            تسجيل الخروج
-          </Button>
-        </form>
+        <Reveal index={5}>
+          <form action={signOutAction}>
+            <Group>
+              <RowButton
+                type="submit"
+                center
+                className="text-destructive"
+                title={
+                  <span className="flex items-center gap-2">
+                    <LogOutIcon className="size-[18px]" />
+                    تسجيل الخروج
+                  </span>
+                }
+              />
+            </Group>
+          </form>
+          <p className="mt-6 text-center text-[12px] text-muted-foreground">{APP_NAME}</p>
+        </Reveal>
       </div>
     </TabScreen>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-3">
-      <h2 className="text-sm font-semibold text-muted-foreground">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
 async function Account() {
   const user = await requireUser();
+  const initial = user.name.trim().slice(0, 1) || "؟";
   return (
-    <div className="surface p-4">
-      <p className="mb-4 truncate text-sm text-muted-foreground" dir="ltr">
-        {user.email}
-      </p>
-      <SettingsForm
-        name={user.name}
-        currency={user.currency}
-        monthlyBudget={user.monthlyBudget}
-      />
-    </div>
+    <Reveal index={0} className="space-y-6">
+      {/* Profile card, like the Apple ID header in Settings. */}
+      <div className="surface flex items-center gap-4 p-4">
+        <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#a1a1a6] to-[#6e6e73] text-[28px] font-semibold text-white">
+          {initial}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-[20px] font-semibold">{user.name}</p>
+          <p className="truncate text-[14px] text-muted-foreground" dir="ltr">
+            {user.email}
+          </p>
+        </div>
+      </div>
+      <SettingsForm name={user.name} currency={user.currency} monthlyBudget={user.monthlyBudget} />
+    </Reveal>
   );
 }
 

@@ -1,16 +1,19 @@
 "use client";
 
-import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
+import { PaletteIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 
-import { cn } from "@/lib/utils";
+import { Group, Row, RowIcon } from "@/components/ui/grouped-list";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 
-const OPTIONS = [
-  { value: "light", label: "فاتح", icon: SunIcon },
-  { value: "dark", label: "داكن", icon: MoonIcon },
-  { value: "system", label: "تلقائي", icon: MonitorIcon },
-] as const;
+type Theme = "light" | "dark" | "system";
+
+const OPTIONS: { value: Theme; label: string }[] = [
+  { value: "light", label: "فاتح" },
+  { value: "dark", label: "داكن" },
+  { value: "system", label: "تلقائي" },
+];
 
 const noop = () => () => {};
 
@@ -18,28 +21,23 @@ export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme();
   // Theme is only known on the client; avoid a hydration mismatch.
   const mounted = useSyncExternalStore(noop, () => true, () => false);
+  const value = (mounted ? theme : "system") as Theme;
 
   return (
-    <div role="radiogroup" aria-label="المظهر" className="grid grid-cols-3 gap-2 rounded-xl bg-muted p-1">
-      {OPTIONS.map(({ value, label, icon: Icon }) => {
-        const active = mounted && theme === value;
-        return (
-          <button
-            key={value}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => setTheme(value)}
-            className={cn(
-              "flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium text-muted-foreground transition-colors",
-              active && "bg-background text-foreground shadow-sm",
-            )}
-          >
-            <Icon className="size-4" />
-            {label}
-          </button>
-        );
-      })}
-    </div>
+    <Group header="المظهر" footer="«تلقائي» يتبع إعداد جهازك.">
+      <Row
+        leading={<RowIcon icon={PaletteIcon} tint="#5856d6" />}
+        title="السِّمة"
+        trailing={
+          <SegmentedControl
+            label="المظهر"
+            value={value}
+            onChange={setTheme}
+            options={OPTIONS}
+            className="w-52"
+          />
+        }
+      />
+    </Group>
   );
 }
