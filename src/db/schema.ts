@@ -197,6 +197,30 @@ export const expense = sqliteTable(
   ],
 );
 
+export const INCOME_SOURCES = ["salary", "freelance", "business", "gift", "investment", "other"] as const;
+export type IncomeSource = (typeof INCOME_SOURCES)[number];
+
+/** Money coming in (salary, freelance…), so the app can show net balance. */
+export const income = sqliteTable(
+  "income",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** Minor units, like expenses. */
+    amount: integer("amount").notNull(),
+    source: text("source", { enum: INCOME_SOURCES }).notNull().default("salary"),
+    note: text("note"),
+    /** Local calendar date, `YYYY-MM-DD`. */
+    date: text("date").notNull(),
+    ...timestamps,
+  },
+  (t) => [index("income_user_date_idx").on(t.userId, t.date)],
+);
+
 /** One row per device/browser that allowed notifications. */
 export const pushSubscription = sqliteTable(
   "push_subscription",

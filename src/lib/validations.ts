@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { FREQUENCIES, PAYMENT_METHODS } from "@/db/schema";
+import { FREQUENCIES, INCOME_SOURCES, PAYMENT_METHODS } from "@/db/schema";
 import { CURRENCIES } from "@/lib/constants";
 import { DATE_RE } from "@/lib/dates";
 
@@ -56,6 +56,14 @@ export const expenseSchema = z.object({
   paymentMethod: z.enum(PAYMENT_METHODS).default("cash"),
   /** New expenses only: also create a recurring rule from this one. */
   repeat: z.enum(["none", ...FREQUENCIES]).default("none"),
+});
+
+export const incomeSchema = z.object({
+  id: z.string().optional(),
+  amount,
+  source: z.enum(INCOME_SOURCES).default("salary"),
+  date: z.string().regex(DATE_RE, "تاريخ غير صالح"),
+  note: optionalText(120),
 });
 
 export const recurringSchema = z.object({

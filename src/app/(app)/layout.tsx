@@ -8,6 +8,7 @@ import { SwipePager } from "@/components/layout/swipe-pager";
 import { TabBar } from "@/components/layout/tab-bar";
 import { TabNavProvider } from "@/components/layout/tab-nav";
 import { TzSync } from "@/components/layout/tz-sync";
+import { WhatsNew } from "@/components/whats-new";
 import { requireUser } from "@/lib/dal";
 import { getCategories } from "@/server/queries";
 
@@ -27,6 +28,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         </Suspense>
         <ExpenseContextMenu />
         <TzSync />
+        <WhatsNew />
       </div>
     </TabNavProvider>
   );

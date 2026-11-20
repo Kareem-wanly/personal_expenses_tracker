@@ -1,12 +1,12 @@
 import "server-only";
 
-import { and, asc, between, desc, eq, like, sql, sum, count } from "drizzle-orm";
+import { and, asc, avg, between, count, desc, eq, isNotNull, like, max, sql, sum } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { cache } from "react";
 
 import { db } from "@/db";
-import { category, expense, recurringExpense } from "@/db/schema";
+import { category, expense, income, recurringExpense } from "@/db/schema";
 import {
   TZ_COOKIE,
   addDays,
@@ -19,6 +19,7 @@ import {
   todayISO,
 } from "@/lib/dates";
 import { requireUser } from "@/lib/dal";
+import { type Insight, buildInsights } from "@/lib/insights";
 import { materializeRecurring } from "@/lib/recurring";
 
 /* -------------------------------------------------------------------------- */
@@ -142,6 +143,49 @@ async function totalsByCategory(userId: string, start: string, end: string) {
 
 export type CategoryTotal = Awaited<ReturnType<typeof totalsByCategory>>[number];
 
+const incomeSelect = {
+  id: income.id,
+  amount: income.amount,
+  source: income.source,
+  note: income.note,
+  date: income.date,
+};
+
+export type IncomeRow = {
+  id: string;
+  amount: number;
+  source: "salary" | "freelance" | "business" | "gift" | "investment" | "other";
+  note: string | null;
+  date: string;
+};
+
+async function incomeBetween(userId: string, start: string, end: string) {
+  const [row] = await db
+    .select({ total: sum(income.amount).mapWith(Number) })
+    .from(income)
+    .where(and(eq(income.userId, userId), between(income.date, start, end)));
+  return row?.total ?? 0;
+}
+
+/** All-time balance: everything earned minus everything spent, up to today. */
+async function allTimeBalance(userId: string, today: string) {
+  const [[inc], [exp], [any]] = await Promise.all([
+    db
+      .select({ total: sum(income.amount).mapWith(Number) })
+      .from(income)
+      .where(and(eq(income.userId, userId), sql`${income.date} <= ${today}`)),
+    db
+      .select({ total: sum(expense.amount).mapWith(Number) })
+      .from(expense)
+      .where(and(eq(expense.userId, userId), sql`${expense.date} <= ${today}`)),
+    db.select({ n: count() }).from(income).where(eq(income.userId, userId)),
+  ]);
+  return {
+    hasIncome: (any?.n ?? 0) > 0,
+    balance: (inc?.total ?? 0) - (exp?.total ?? 0),
+  };
+}
+
 /* -------------------------------------------------------------------------- */
 /*                                 Dashboard                                  */
 /* -------------------------------------------------------------------------- */
@@ -156,7 +200,7 @@ export async function getDashboardData(today: string) {
   const dow = parseISODate(today).getDay(); // 0 = Sunday … 6 = Saturday
   const weekStart = addDays(today, -((dow + 1) % 7));
 
-  const [monthTotal, todayTotal, weekTotal, byCategory, recent] =
+  const [monthTotal, todayTotal, weekTotal, byCategory, recent, monthIncome, balance] =
     await Promise.all([
       sumBetween(user.id, start, end),
       sumBetween(user.id, today, today),
@@ -169,6 +213,8 @@ export async function getDashboardData(today: string) {
         .where(eq(expense.userId, user.id))
         .orderBy(desc(expense.date), desc(expense.createdAt))
         .limit(6),
+      incomeBetween(user.id, start, end),
+      allTimeBalance(user.id, today),
     ]);
 
   const dayOfMonth = Number(today.slice(8, 10));
@@ -182,6 +228,9 @@ export async function getDashboardData(today: string) {
     weekTotal,
     byCategory,
     recent: recent as ExpenseRow[],
+    monthIncome,
+    hasIncome: balance.hasIncome,
+    balance: balance.balance,
     dailyAverage: Math.round(monthTotal / dayOfMonth),
     projected: Math.round((monthTotal / dayOfMonth) * totalDays),
     daysLeft: totalDays - dayOfMonth,
@@ -260,7 +309,7 @@ export async function getMonthlyReport(month: string, today: string) {
     between(expense.date, start, end),
   );
 
-  const [total, prevTotal, byCategory, byDayRows, top, trendRows, byMethod] =
+  const [total, prevTotal, byCategory, byDayRows, top, trendRows, byMethod, incomes, incomeTrendRows] =
     await Promise.all([
       sumBetween(user.id, start, end),
       sumBetween(user.id, prev.start, prev.end),
@@ -298,6 +347,19 @@ export async function getMonthlyReport(month: string, today: string) {
         .from(expense)
         .where(monthCondition)
         .groupBy(expense.paymentMethod),
+      db
+        .select(incomeSelect)
+        .from(income)
+        .where(and(eq(income.userId, user.id), between(income.date, start, end)))
+        .orderBy(desc(income.date), desc(income.createdAt)),
+      db
+        .select({
+          month: sql<string>`substr(${income.date}, 1, 7)`,
+          total: sum(income.amount).mapWith(Number),
+        })
+        .from(income)
+        .where(and(eq(income.userId, user.id), between(income.date, trendStart, end)))
+        .groupBy(sql`substr(${income.date}, 1, 7)`),
     ]);
 
   const totalDays = daysInMonth(month);
@@ -317,7 +379,13 @@ export async function getMonthlyReport(month: string, today: string) {
   });
 
   const trendMap = new Map(trendRows.map((r) => [r.month, r.total ?? 0]));
-  const trend = trendMonths.map((m) => ({ month: m, total: trendMap.get(m) ?? 0 }));
+  const incomeTrendMap = new Map(incomeTrendRows.map((r) => [r.month, r.total ?? 0]));
+  const trend = trendMonths.map((m) => ({
+    month: m,
+    total: trendMap.get(m) ?? 0,
+    income: incomeTrendMap.get(m) ?? 0,
+  }));
+  const incomeTotal = incomes.reduce((a, r) => a + r.amount, 0);
 
   const spendingDays = daily.filter((d) => d.total > 0).length;
   const maxDay = daily.reduce((a, b) => (b.total > a.total ? b : a), daily[0]);
@@ -342,6 +410,9 @@ export async function getMonthlyReport(month: string, today: string) {
     spendingDays,
     maxDay: maxDay.total > 0 ? maxDay : null,
     isCurrent,
+    incomes: incomes as IncomeRow[],
+    incomeTotal,
+    net: incomeTotal - total,
   };
 }
 
@@ -374,3 +445,134 @@ export async function getRecurring() {
 }
 
 export type RecurringRow = Awaited<ReturnType<typeof getRecurring>>[number];
+
+/* -------------------------------------------------------------------------- */
+/*                               Smart insights                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Gather the numbers the rule-based insight engine needs. For the month in
+ * progress, comparisons use the *same number of days* of the previous month
+ * so that "day 10 vs a full month" never looks like a 70% drop.
+ */
+export async function getInsights(month: string, today: string): Promise<Insight[]> {
+  const user = await requireUser();
+  await ensureRecurring(user.id);
+
+  const totalDays = daysInMonth(month);
+  const isCurrent = month === monthOf(today);
+  if (month > monthOf(today)) return [];
+  const elapsedDays = isCurrent ? Number(today.slice(8, 10)) : totalDays;
+  const start = `${month}-01`;
+  const end = isCurrent ? today : monthRange(month).end;
+
+  const prevMonth = shiftMonth(month, -1);
+  const prevStart = `${prevMonth}-01`;
+  const prevEnd = isCurrent
+    ? `${prevMonth}-${String(Math.min(elapsedDays, daysInMonth(prevMonth))).padStart(2, "0")}`
+    : monthRange(prevMonth).end;
+
+  // Weekday pattern over the last 12 full weeks.
+  const patternEnd = isCurrent ? today : end;
+  const patternStart = addDays(patternEnd, -83);
+
+  const period = and(eq(expense.userId, user.id), between(expense.date, start, end));
+
+  const [
+    total,
+    prevSamePeriod,
+    cats,
+    prevCats,
+    monthIncome,
+    days,
+    repeats,
+    spendDays,
+    rules,
+    stats,
+    largestRow,
+  ] = await Promise.all([
+    sumBetween(user.id, start, end),
+    sumBetween(user.id, prevStart, prevEnd),
+    totalsByCategory(user.id, start, end),
+    db
+      .select({ categoryId: expense.categoryId, total: sum(expense.amount).mapWith(Number) })
+      .from(expense)
+      .where(and(eq(expense.userId, user.id), between(expense.date, prevStart, prevEnd)))
+      .groupBy(expense.categoryId),
+    incomeBetween(user.id, `${month}-01`, monthRange(month).end),
+    db
+      .select({ date: expense.date, total: sum(expense.amount).mapWith(Number) })
+      .from(expense)
+      .where(and(eq(expense.userId, user.id), between(expense.date, patternStart, patternEnd)))
+      .groupBy(expense.date),
+    db
+      .select({
+        label: sql<string>`trim(${expense.note})`,
+        count: count(),
+        total: sum(expense.amount).mapWith(Number),
+      })
+      .from(expense)
+      .where(and(period, isNotNull(expense.note), sql`trim(${expense.note}) <> ''`))
+      .groupBy(sql`trim(${expense.note})`)
+      .orderBy(desc(count()))
+      .limit(3),
+    db
+      .select({ n: sql<number>`count(distinct ${expense.date})` })
+      .from(expense)
+      .where(period),
+    db
+      .select({ amount: recurringExpense.amount, frequency: recurringExpense.frequency })
+      .from(recurringExpense)
+      .where(and(eq(recurringExpense.userId, user.id), eq(recurringExpense.active, true))),
+    db
+      .select({ avg: avg(expense.amount).mapWith(Number), max: max(expense.amount) })
+      .from(expense)
+      .where(period),
+    db
+      .select({ note: expense.note, amount: expense.amount, categoryName: category.name })
+      .from(expense)
+      .leftJoin(category, eq(category.id, expense.categoryId))
+      .where(period)
+      .orderBy(desc(expense.amount))
+      .limit(1),
+  ]);
+
+  // Average spend per weekday occurrence (12 occurrences each in 84 days).
+  const weekdayTotals = Array<number>(7).fill(0);
+  for (const d of days) weekdayTotals[parseISODate(d.date).getDay()] += d.total ?? 0;
+  const hasPattern = days.length >= 14;
+
+  const prevByCat = new Map(prevCats.map((r) => [r.categoryId, r.total ?? 0]));
+  const recurringMonthly = rules.reduce(
+    (a, r) => a + (r.frequency === "weekly" ? (r.amount * 52) / 12 : r.frequency === "yearly" ? r.amount / 12 : r.amount),
+    0,
+  );
+  const largest = largestRow[0];
+
+  return buildInsights({
+    currency: user.currency,
+    isCurrent,
+    elapsedDays,
+    totalDays,
+    total,
+    prevSamePeriod,
+    categories: cats.map((c) => ({
+      id: c.categoryId,
+      name: c.name,
+      icon: c.icon,
+      total: c.total,
+      prevTotal: prevByCat.get(c.categoryId) ?? 0,
+      budget: c.budget,
+    })),
+    monthlyBudget: user.monthlyBudget,
+    income: monthIncome,
+    weekdayAverages: hasPattern ? weekdayTotals.map((t) => t / 12) : null,
+    repeats: repeats.map((r) => ({ label: r.label, count: r.count, total: r.total ?? 0 })),
+    noSpendDays: Math.max(elapsedDays - (spendDays[0]?.n ?? 0), 0),
+    recurringMonthly,
+    largest: largest
+      ? { label: largest.note || largest.categoryName || "مصروف", amount: largest.amount }
+      : null,
+    averageExpense: stats[0]?.avg ?? 0,
+  });
+}

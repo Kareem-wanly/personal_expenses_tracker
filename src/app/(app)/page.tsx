@@ -9,9 +9,11 @@ import {
 import Link from "next/link";
 import { Suspense, ViewTransition } from "react";
 
+import { BalanceCard } from "@/components/balance-card";
 import { EmptyState } from "@/components/empty-state";
 import { AddExpenseButton } from "@/components/expenses/add-expense-button";
 import { ExpenseItem } from "@/components/expenses/expense-item";
+import { InsightsList } from "@/components/insights-list";
 import { PageHeader } from "@/components/layout/page-header";
 import { TabScreen } from "@/components/layout/tab-screen";
 import { AnimatedMoney } from "@/components/motion/animated-money";
@@ -25,7 +27,7 @@ import { statValueSize } from "@/lib/fit-text";
 import { formatMoney } from "@/lib/money";
 import { TAB_FORWARD } from "@/lib/tabs";
 import { cn } from "@/lib/utils";
-import { getDashboardData, getUserToday } from "@/server/queries";
+import { getDashboardData, getInsights, getUserToday } from "@/server/queries";
 
 export default function HomePage() {
   return (
@@ -87,6 +89,16 @@ async function Dashboard() {
 
       <NotificationPrompt hasExpenses={hasData} />
 
+      <Reveal index={1}>
+        <BalanceCard
+          hasIncome={d.hasIncome}
+          income={d.monthIncome}
+          spent={d.monthTotal}
+          balance={d.balance}
+          currency={currency}
+        />
+      </Reveal>
+
       <Reveal index={1} className="grid grid-cols-2 gap-3">
         <Stat icon={SunIcon} tint="#ff9f0a" label="اليوم" value={formatMoney(d.todayTotal, currency)} />
         <Stat
@@ -120,6 +132,11 @@ async function Dashboard() {
         </Reveal>
       ) : (
         <>
+          {/* Insights stream in separately so they never delay the dashboard. */}
+          <Suspense fallback={null}>
+            <DashboardInsights month={d.month} today={today} />
+          </Suspense>
+
           {d.byCategory.length > 0 && (
             <Reveal as="section" index={2} className="space-y-2.5">
               <SectionTitle title="أين تذهب أموالك" href="/reports" linkLabel="التقرير" />
@@ -143,6 +160,15 @@ async function Dashboard() {
         </>
       )}
     </div>
+  );
+}
+
+async function DashboardInsights({ month, today }: { month: string; today: string }) {
+  const insights = await getInsights(month, today);
+  return (
+    <Reveal index={2}>
+      <InsightsList insights={insights} limit={3} />
+    </Reveal>
   );
 }
 

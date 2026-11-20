@@ -11,6 +11,7 @@ import { db } from "@/db";
 import {
   category,
   expense,
+  income,
   pushSubscription,
   recurringExpense,
   user as userTable,
@@ -34,6 +35,7 @@ import {
   categorySchema,
   expenseSchema,
   fromZodError,
+  incomeSchema,
   quickAddSchema,
   recurringSchema,
   settingsSchema,
@@ -178,6 +180,38 @@ export async function saveExpense(
   notifyBudgets?.();
   refresh();
   return { ok: true, message };
+}
+
+/* --------------------------------- Income -------------------------------- */
+
+export async function saveIncome(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = incomeSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return fromZodError(parsed.error);
+  const { id, amount, source, date, note } = parsed.data;
+  const values = { amount: toMinor(amount), source, date, note };
+
+  if (id) {
+    const res = await db
+      .update(income)
+      .set(values)
+      .where(and(eq(income.id, id), eq(income.userId, user.id)));
+    if (res.rowsAffected === 0) return { ok: false, message: "الدخل غير موجود" };
+  } else {
+    await db.insert(income).values({ ...values, userId: user.id });
+  }
+  refresh();
+  return { ok: true, message: id ? "تم تحديث الدخل" : "تمت إضافة الدخل" };
+}
+
+export async function deleteIncome(id: string): Promise<ActionState> {
+  const user = await requireUser();
+  await db.delete(income).where(and(eq(income.id, id), eq(income.userId, user.id)));
+  refresh();
+  return { ok: true, message: "تم حذف الدخل" };
 }
 
 /** Save several expenses parsed from one sentence ("قهوة 5 وسندويشة 7"). */

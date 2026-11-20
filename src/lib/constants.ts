@@ -1,4 +1,4 @@
-import type { PaymentMethod } from "@/db/schema";
+import type { IncomeSource, PaymentMethod } from "@/db/schema";
 
 export const APP_NAME = "مصروفي";
 export const APP_DESCRIPTION = "تتبّع مصاريفك اليومية بسهولة واحصل على تقارير شهرية واضحة";
@@ -60,3 +60,12 @@ export const CURRENCIES = [
 ] as const;
 
 export type CurrencyCode = (typeof CURRENCIES)[number]["code"];
+
+export const INCOME_SOURCE_META: Record<IncomeSource, { label: string; icon: string; color: string }> = {
+  salary: { label: "راتب", icon: "💼", color: "#34c759" },
+  freelance: { label: "عمل حر", icon: "🧑‍💻", color: "#0a84ff" },
+  business: { label: "تجارة", icon: "🏪", color: "#ff9f0a" },
+  gift: { label: "هدية", icon: "🎁", color: "#ff2d55" },
+  investment: { label: "استثمار", icon: "📈", color: "#5e5ce6" },
+  other: { label: "أخرى", icon: "💰", color: "#8e8e93" },
+};

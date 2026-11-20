@@ -14,7 +14,10 @@ import { Suspense, ViewTransition } from "react";
 
 import { EmptyState } from "@/components/empty-state";
 import { AddExpenseButton } from "@/components/expenses/add-expense-button";
+import { AddIncomeButton } from "@/components/expenses/add-income-button";
 import { ExpenseItem } from "@/components/expenses/expense-item";
+import { IncomeItem } from "@/components/expenses/income-item";
+import { InsightsList } from "@/components/insights-list";
 import { PageHeader } from "@/components/layout/page-header";
 import { TabScreen } from "@/components/layout/tab-screen";
 import { AnimatedMoney } from "@/components/motion/animated-money";
@@ -28,7 +31,7 @@ import { formatShortDate, monthOf, normalizeMonth } from "@/lib/dates";
 import { formatMoney, formatNumber, formatPercent } from "@/lib/money";
 import { statValueSize } from "@/lib/fit-text";
 import { cn } from "@/lib/utils";
-import { getMonthlyReport, getUserToday } from "@/server/queries";
+import { getInsights, getMonthlyReport, getUserToday } from "@/server/queries";
 
 export const metadata: Metadata = { title: "التقرير الشهري" };
 
@@ -130,6 +133,57 @@ async function Report({
                 ) : null}
               </Reveal>
 
+              <Suspense fallback={null}>
+                <ReportInsights month={month} today={today} />
+              </Suspense>
+
+              <Section index={1} title="الدخل والادخار">
+                {r.incomes.length === 0 ? (
+                  <div className="surface flex items-center gap-3 p-4">
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-[#34c759]/15 text-[22px]">
+                      💼
+                    </span>
+                    <p className="min-w-0 flex-1 text-[14px] text-muted-foreground">
+                      لا دخل مسجّل لهذا الشهر. أضفه لتعرف صافي الشهر ونسبة الادخار.
+                    </p>
+                    <AddIncomeButton label="دخل" className="shrink-0" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="surface grid grid-cols-3 gap-2 p-3 text-center">
+                      <div>
+                        <p className="text-[12px] text-muted-foreground">الدخل</p>
+                        <p className="truncate text-[15px] font-bold text-[#248a3d] tabular dark:text-[#30d158]">
+                          {formatMoney(r.incomeTotal, currency)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[12px] text-muted-foreground">الصافي</p>
+                        <p
+                          className={cn(
+                            "truncate text-[15px] font-bold tabular",
+                            r.net < 0 && "text-[#d70015] dark:text-[#ff6961]",
+                          )}
+                        >
+                          {formatMoney(r.net, currency)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[12px] text-muted-foreground">نسبة الادخار</p>
+                        <p className="truncate text-[15px] font-bold tabular">
+                          {r.net >= 0 ? formatPercent(r.net / r.incomeTotal) : "—"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="surface inset-list overflow-hidden">
+                      {r.incomes.map((i) => (
+                        <IncomeItem key={i.id} item={i} currency={currency} meta={formatShortDate(i.date)} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </Section>
+
               <Section index={1} title="حسب التصنيف">
                 <div className="surface p-4 pb-2">
                   <CategoryDonut items={r.byCategory} total={r.total} currency={currency} />
@@ -197,6 +251,15 @@ async function Report({
         </div>
       </ViewTransition>
     </div>
+  );
+}
+
+async function ReportInsights({ month, today }: { month: string; today: string }) {
+  const insights = await getInsights(month, today);
+  return (
+    <Reveal index={1}>
+      <InsightsList insights={insights} limit={6} title="رؤى هذا الشهر" />
+    </Reveal>
   );
 }
 

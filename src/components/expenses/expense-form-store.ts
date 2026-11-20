@@ -2,15 +2,24 @@
 
 import { useSyncExternalStore } from "react";
 
-import type { ExpenseRow } from "@/server/queries";
+import type { ExpenseRow, IncomeRow } from "@/server/queries";
 
 /**
  * Tiny global store so any component (FAB, list rows, empty states) can open
- * the single expense form drawer without prop drilling or context.
+ * the single entry sheet — for an expense or an income — without prop
+ * drilling or context.
  */
-type State = { open: boolean; expense: ExpenseRow | null; nonce: number };
+export type EntryKind = "expense" | "income";
 
-let state: State = { open: false, expense: null, nonce: 0 };
+type State = {
+  open: boolean;
+  kind: EntryKind;
+  expense: ExpenseRow | null;
+  income: IncomeRow | null;
+  nonce: number;
+};
+
+let state: State = { open: false, kind: "expense", expense: null, income: null, nonce: 0 };
 const listeners = new Set<() => void>();
 
 function emit(next: State) {
@@ -19,7 +28,17 @@ function emit(next: State) {
 }
 
 export function openExpenseForm(expense: ExpenseRow | null = null) {
-  emit({ open: true, expense, nonce: state.nonce + 1 });
+  emit({ open: true, kind: "expense", expense, income: null, nonce: state.nonce + 1 });
+}
+
+export function openIncomeForm(income: IncomeRow | null = null) {
+  emit({ open: true, kind: "income", expense: null, income, nonce: state.nonce + 1 });
+}
+
+/** Switch a *new* entry between expense and income without closing the sheet. */
+export function setEntryKind(kind: EntryKind) {
+  if (state.expense || state.income) return; // editing: kind is fixed
+  emit({ ...state, kind });
 }
 
 export function closeExpenseForm() {

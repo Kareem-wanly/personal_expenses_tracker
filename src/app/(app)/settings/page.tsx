@@ -11,6 +11,7 @@ import { NotificationSettings } from "@/components/settings/notification-setting
 import { RecurringManager } from "@/components/settings/recurring-manager";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { ThemeSwitcher } from "@/components/settings/theme-switcher";
+import { WhatsNewRow } from "@/components/whats-new";
 import { Group, RowButton } from "@/components/ui/grouped-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { APP_NAME } from "@/lib/constants";
@@ -51,7 +52,8 @@ export default function SettingsPage() {
           <ThemeSwitcher />
         </Reveal>
 
-        <Reveal index={4}>
+        <Reveal index={4} className="space-y-7">
+          <WhatsNewRow />
           <InstallApp />
         </Reveal>
 

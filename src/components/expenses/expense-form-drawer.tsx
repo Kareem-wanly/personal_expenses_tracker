@@ -5,7 +5,6 @@ import {
   CheckIcon,
   CreditCardIcon,
   Loader2Icon,
-  type LucideIcon,
   PencilLineIcon,
   RepeatIcon,
   SparklesIcon,
@@ -45,13 +44,15 @@ import {
   openExpenseForm,
   useExpenseFormState,
 } from "./expense-form-store";
+import { IncomeForm } from "./income-form";
+import { EntryKindSwitch, SPRING, SheetRow } from "./sheet-parts";
 
 type Props = { categories: CategoryOption[]; currency: string };
 
-const SPRING = { type: "spring", stiffness: 520, damping: 30 } as const;
 
 export function ExpenseFormDrawer({ categories, currency }: Props) {
-  const { open, expense, nonce } = useExpenseFormState();
+  const { open, kind, expense, income, nonce } = useExpenseFormState();
+  const isNew = !expense && !income;
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -72,11 +73,25 @@ export function ExpenseFormDrawer({ categories, currency }: Props) {
       <DrawerContent
         // Dark sheets sit on an elevated grey, with cards one step lighter.
         className="mx-auto max-w-2xl border-t-0 bg-background data-[swipe-direction=down]:rounded-t-[28px] dark:bg-[#1c1c1e] dark:[--card:#2c2c2e]"
-        // New expense: jump straight to the amount so the keypad opens.
-        initialFocus={expense ? undefined : () => document.getElementById("amount")}
+        // New entry: jump straight to the amount so the keypad opens.
+        initialFocus={
+          isNew
+            ? () => document.getElementById(kind === "income" ? "income-amount" : "amount")
+            : undefined
+        }
       >
-        {/* Remount on every open so the form starts fresh. */}
-        <ExpenseForm key={nonce} categories={categories} currency={currency} expense={expense} />
+        {/* Remount on every open (and kind switch) so the form starts fresh. */}
+        {kind === "income" ? (
+          <IncomeForm key={`i-${nonce}`} currency={currency} income={income} showKindSwitch={isNew} />
+        ) : (
+          <ExpenseForm
+            key={`e-${nonce}`}
+            categories={categories}
+            currency={currency}
+            expense={expense}
+            showKindSwitch={isNew}
+          />
+        )}
       </DrawerContent>
     </Drawer>
   );
@@ -88,7 +103,11 @@ function ExpenseForm({
   categories,
   currency,
   expense,
-}: Props & { expense: ReturnType<typeof useExpenseFormState>["expense"] }) {
+  showKindSwitch,
+}: Props & {
+  expense: ReturnType<typeof useExpenseFormState>["expense"];
+  showKindSwitch: boolean;
+}) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(saveExpense, {
     ok: false,
   });
@@ -190,6 +209,7 @@ function ExpenseForm({
         <DrawerDescription className="sr-only">أدخل المبلغ واختر التصنيف ثم احفظ</DrawerDescription>
         {expense ? <DeleteExpenseButton id={expense.id} /> : <span className="w-8" />}
       </div>
+      {showKindSwitch && <EntryKindSwitch value="expense" />}
 
       <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 pb-4">
         {/* Quick entry (new expenses only) */}
@@ -351,7 +371,7 @@ function ExpenseForm({
 
         {/* Details: inset-grouped rows */}
         <div className="surface inset-list overflow-hidden">
-          <Row icon={CalendarDaysIcon} tint="#ff3b30" label="التاريخ">
+          <SheetRow icon={CalendarDaysIcon} tint="#ff3b30" label="التاريخ">
             <SegmentedControl
               label="التاريخ"
               value={dateMode}
@@ -363,7 +383,7 @@ function ExpenseForm({
                 { value: "other", label: "آخر" },
               ]}
             />
-          </Row>
+          </SheetRow>
           <AnimatePresence initial={false}>
             {dateMode === "other" && (
               <motion.div
@@ -393,7 +413,7 @@ function ExpenseForm({
               </motion.div>
             )}
           </AnimatePresence>
-          <Row icon={CreditCardIcon} tint="#34c759" label="الدفع">
+          <SheetRow icon={CreditCardIcon} tint="#34c759" label="الدفع">
             <SegmentedControl
               name="paymentMethod"
               label="طريقة الدفع"
@@ -405,9 +425,9 @@ function ExpenseForm({
                 label,
               }))}
             />
-          </Row>
+          </SheetRow>
           {!expense && (
-            <Row icon={RepeatIcon} tint="#5e5ce6" label="التكرار">
+            <SheetRow icon={RepeatIcon} tint="#5e5ce6" label="التكرار">
               <SegmentedControl
                 label="التكرار"
                 value={repeat}
@@ -420,9 +440,9 @@ function ExpenseForm({
                   { value: "yearly", label: "سنوي" },
                 ]}
               />
-            </Row>
+            </SheetRow>
           )}
-          <Row icon={PencilLineIcon} tint="#8e8e93">
+          <SheetRow icon={PencilLineIcon} tint="#8e8e93">
             <label htmlFor="note" className="sr-only">
               ملاحظة
             </label>
@@ -435,7 +455,7 @@ function ExpenseForm({
               placeholder="ملاحظة (اختياري)"
               className="h-9 w-full bg-transparent text-[16px] outline-none placeholder:text-muted-foreground"
             />
-          </Row>
+          </SheetRow>
         </div>
         {errors.note && <p className="px-1 text-[13px] text-destructive">{errors.note[0]}</p>}
         {repeat !== "none" && (
@@ -470,34 +490,6 @@ function ExpenseForm({
         </motion.button>
       </div>
     </form>
-  );
-}
-
-/** Settings-style row: coloured glyph tile, label, trailing control. */
-function Row({
-  icon: Icon,
-  tint,
-  label,
-  children,
-}: {
-  icon: LucideIcon;
-  tint: string;
-  label?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 ps-4">
-      <span
-        className="flex size-7 shrink-0 items-center justify-center rounded-[8px] text-white"
-        style={{ backgroundColor: tint }}
-      >
-        <Icon className="size-4" strokeWidth={2.3} />
-      </span>
-      <div className="list-row-body flex min-h-12 min-w-0 flex-1 items-center justify-between gap-3 py-1.5 pe-4">
-        {label && <span className="text-[16px]">{label}</span>}
-        {children}
-      </div>
-    </div>
   );
 }
 
