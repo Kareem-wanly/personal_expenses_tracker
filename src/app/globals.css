@@ -298,6 +298,39 @@
   animation: none;
 }
 
+/*
+ * Month paging inside a screen: a short directional nudge plus fade
+ * (same direction rules as tabs: "next" travels like "forward").
+ */
+::view-transition-old(.month-next) {
+  --month-to: calc(var(--tab-dir) * 36px);
+  animation: 160ms ease-in both month-out;
+}
+::view-transition-new(.month-next) {
+  --month-from: calc(var(--tab-dir) * -36px);
+  animation: 380ms var(--ease-ios) 60ms both month-in;
+}
+::view-transition-old(.month-prev) {
+  --month-to: calc(var(--tab-dir) * -36px);
+  animation: 160ms ease-in both month-out;
+}
+::view-transition-new(.month-prev) {
+  --month-from: calc(var(--tab-dir) * 36px);
+  animation: 380ms var(--ease-ios) 60ms both month-in;
+}
+@keyframes month-out {
+  to {
+    translate: var(--month-to) 0;
+    opacity: 0;
+  }
+}
+@keyframes month-in {
+  from {
+    translate: var(--month-from) 0;
+    opacity: 0;
+  }
+}
+
 /* Content arriving after a skeleton: rise and un-blur, Apple-style. */
 ::view-transition-old(.reveal-out) {
   animation: 140ms ease-out both reveal-fade reverse;
