@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
   experimental: {
     // Detect offline state & auto-retry navigations / Server Actions.
     useOffline: true,
+    // Keep visited tabs in the client cache for a while so switching back
+    // (tap or swipe) is instant instead of re-showing the skeleton. Every
+    // mutation calls refresh(), which clears this cache, so edits made in
+    // the app always show; only changes from another device wait ≤ 2 min.
+    staleTimes: { dynamic: 120 },
   },
   turbopack: {
     rules: {
