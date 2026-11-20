@@ -1,22 +1,29 @@
-import { DownloadIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+import {
+  CalendarCheckIcon,
+  ChevronLeftIcon,
+  DownloadIcon,
+  FlameIcon,
+  GaugeIcon,
+  HashIcon,
+  type LucideIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+} from "lucide-react";
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import { Suspense, ViewTransition } from "react";
 
-import { CategoryBars } from "@/components/category-bars";
 import { EmptyState } from "@/components/empty-state";
 import { AddExpenseButton } from "@/components/expenses/add-expense-button";
 import { ExpenseItem } from "@/components/expenses/expense-item";
 import { PageHeader } from "@/components/layout/page-header";
 import { TabScreen } from "@/components/layout/tab-screen";
-import { MonthSwitcher } from "@/components/month-switcher";
-import {
-  CategoryDonut,
-  DailyBars,
-  TrendBars,
-} from "@/components/reports/report-charts";
-import { buttonVariants } from "@/components/ui/button";
+import { AnimatedMoney } from "@/components/motion/animated-money";
+import { Reveal } from "@/components/motion/reveal";
+import { MONTH_NEXT, MONTH_PREV, MonthSwitcher } from "@/components/month-switcher";
+import { PaymentBreakdown } from "@/components/reports/payment-breakdown";
+import { CategoryDonut, DailyBars, TrendBars } from "@/components/reports/report-charts";
+import { SpendingBreakdown } from "@/components/spending-breakdown";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { formatShortDate, monthOf, normalizeMonth } from "@/lib/dates";
 import { formatMoney, formatNumber, formatPercent } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -24,11 +31,20 @@ import { getMonthlyReport, getUserToday } from "@/server/queries";
 
 export const metadata: Metadata = { title: "التقرير الشهري" };
 
+const CONTENT_ENTER = { [MONTH_NEXT]: MONTH_NEXT, [MONTH_PREV]: MONTH_PREV, default: "reveal-in" };
+const CONTENT_EXIT = { [MONTH_NEXT]: MONTH_NEXT, [MONTH_PREV]: MONTH_PREV, default: "reveal-out" };
+
 export default function ReportsPage({ searchParams }: PageProps<"/reports">) {
   return (
     <TabScreen>
       <PageHeader title="التقرير الشهري" />
-      <Suspense fallback={<ReportSkeleton />}>
+      <Suspense
+        fallback={
+          <ViewTransition exit="reveal-out" default="none">
+            <ReportSkeleton />
+          </ViewTransition>
+        }
+      >
         <Report searchParams={searchParams} />
       </Suspense>
     </TabScreen>
@@ -48,197 +64,237 @@ async function Report({
   const currency = r.user.currency;
 
   return (
-    <div className="space-y-5">
-      <MonthSwitcher month={month} currentMonth={currentMonth} basePath="/reports" />
-
-      {r.total === 0 ? (
-        <EmptyState
-          icon="📊"
-          title="لا توجد بيانات لهذا الشهر"
-          description="أضف مصاريفك وسيظهر هنا تحليل كامل لإنفاقك."
-          action={r.isCurrent ? <AddExpenseButton className="mt-2 h-11 px-5" /> : undefined}
-        />
-      ) : (
-        <>
-          {/* Summary */}
-          <section className="rounded-3xl border bg-card p-5">
-            <p className="text-sm text-muted-foreground">إجمالي المصروف</p>
-            <div className="mt-1 flex flex-wrap items-end justify-between gap-2">
-              <p className="text-3xl font-bold tabular" dir="ltr">
-                {formatMoney(r.total, currency)}
-              </p>
-              {r.change !== null && <ChangeBadge change={r.change} />}
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              الشهر السابق: {formatMoney(r.prevTotal, currency)}
-            </p>
-
-            <dl className="mt-4 grid grid-cols-2 gap-3 border-t pt-4 text-sm sm:grid-cols-4">
-              <Metric label="عدد العمليات" value={formatNumber(r.count)} />
-              <Metric label="المعدّل اليومي" value={formatMoney(r.dailyAverage, currency)} />
-              <Metric label="أيام الصرف" value={`${r.spendingDays} يوم`} />
-              {r.projected !== null ? (
-                <Metric label="المتوقّع للشهر" value={formatMoney(r.projected, currency)} />
-              ) : r.maxDay ? (
-                <Metric
-                  label="أعلى يوم"
-                  value={`${formatShortDate(r.maxDay.date)}`}
-                  hint={formatMoney(r.maxDay.total, currency)}
-                />
-              ) : null}
-            </dl>
-
+    <div className="space-y-7">
+      {/* Summary: month switcher, headline figure, comparison, budget. */}
+      <section className="surface p-3 pb-5" aria-label="ملخّص الشهر">
+        <MonthSwitcher bare month={month} currentMonth={currentMonth} basePath="/reports" />
+        <ViewTransition key={`sum-${month}`} enter={CONTENT_ENTER} exit={CONTENT_EXIT} default="none">
+          <div className="mt-3 flex flex-col items-center px-2 text-center">
+            <AnimatedMoney
+              value={r.total}
+              currency={currency}
+              className="block text-[38px] font-bold leading-tight tracking-tight tabular"
+            />
+            {r.change !== null ? (
+              <ChangeBadge change={r.change} prev={formatMoney(r.prevTotal, currency)} />
+            ) : (
+              <p className="mt-1 text-[14px] text-muted-foreground">لا توجد بيانات للشهر السابق</p>
+            )}
             {r.user.monthlyBudget ? (
-              <BudgetLine
-                spent={r.total}
-                budget={r.user.monthlyBudget}
-                currency={currency}
-              />
+              <BudgetLine spent={r.total} budget={r.user.monthlyBudget} currency={currency} />
             ) : null}
-          </section>
+          </div>
+        </ViewTransition>
+      </section>
 
-          {/* By category */}
-          <Card title="التوزيع حسب التصنيف">
-            <CategoryDonut items={r.byCategory} total={r.total} currency={currency} />
-            <div className="mt-4">
-              <CategoryBars items={r.byCategory} total={r.total} currency={currency} />
-            </div>
-          </Card>
-
-          {/* Daily */}
-          <Card title="الإنفاق اليومي" subtitle="الخط المتقطّع = المعدّل اليومي">
-            <DailyBars daily={r.daily} average={r.dailyAverage} currency={currency} />
-          </Card>
-
-          {/* Trend */}
-          <Card title="آخر 6 أشهر">
-            <TrendBars trend={r.trend} month={month} currency={currency} />
-          </Card>
-
-          {/* Payment methods */}
-          {r.byMethod.length > 0 && (
-            <Card title="طرق الدفع">
-              <ul className="space-y-2">
-                {r.byMethod
-                  .sort((a, b) => b.total - a.total)
-                  .map((m) => (
-                    <li key={m.method} className="flex items-center justify-between text-sm">
-                      <span>{PAYMENT_METHOD_LABELS[m.method]}</span>
-                      <span className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground tabular">
-                          {formatPercent(m.total / r.total)}
-                        </span>
-                        <span className="font-medium tabular" dir="ltr">
-                          {formatMoney(m.total, currency)}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
-              </ul>
-            </Card>
-          )}
-
-          {/* Top expenses */}
-          <Card title="أكبر 5 مصاريف">
-            <div className="inset-list -mx-4 -mb-4">
-              {r.top.map((e) => (
-                <ExpenseItem
-                  key={e.id}
-                  expense={e}
-                  currency={currency}
-                  meta={formatShortDate(e.date)}
+      <ViewTransition key={`body-${month}`} enter={CONTENT_ENTER} exit={CONTENT_EXIT} default="none">
+        <div className="space-y-7">
+          {r.total === 0 ? (
+            <EmptyState
+              icon="📊"
+              title="لا توجد بيانات لهذا الشهر"
+              description="أضف مصاريفك وسيظهر هنا تحليل كامل لإنفاقك."
+              action={r.isCurrent ? <AddExpenseButton /> : undefined}
+            />
+          ) : (
+            <>
+              <Reveal index={0} className="grid grid-cols-2 gap-3">
+                <Metric icon={HashIcon} tint="#0a84ff" label="عدد العمليات" value={formatNumber(r.count)} />
+                <Metric
+                  icon={GaugeIcon}
+                  tint="#bf5af2"
+                  label="المعدّل اليومي"
+                  value={formatMoney(r.dailyAverage, currency)}
                 />
-              ))}
-            </div>
-          </Card>
+                <Metric
+                  icon={CalendarCheckIcon}
+                  tint="#30b0c7"
+                  label="أيام الصرف"
+                  value={`${formatNumber(r.spendingDays)} يوم`}
+                />
+                {r.projected !== null ? (
+                  <Metric
+                    icon={TrendingUpIcon}
+                    tint="#ff9f0a"
+                    label="المتوقّع للشهر"
+                    value={formatMoney(r.projected, currency)}
+                  />
+                ) : r.maxDay ? (
+                  <Metric
+                    icon={FlameIcon}
+                    tint="#ff9f0a"
+                    label={`أعلى يوم · ${formatShortDate(r.maxDay.date)}`}
+                    value={formatMoney(r.maxDay.total, currency)}
+                  />
+                ) : null}
+              </Reveal>
 
-          <a
-            href={`/api/export?month=${month}`}
-            download
-            className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full")}
-          >
-            <DownloadIcon />
-            تصدير الشهر (CSV / Excel)
-          </a>
-        </>
-      )}
+              <Section index={1} title="حسب التصنيف">
+                <div className="surface p-4 pb-2">
+                  <CategoryDonut items={r.byCategory} total={r.total} currency={currency} />
+                </div>
+                <SpendingBreakdown
+                  items={r.byCategory}
+                  total={r.total}
+                  currency={currency}
+                  limit={r.byCategory.length}
+                  bar={false}
+                />
+              </Section>
+
+              <Section index={2} title="الإنفاق اليومي">
+                <div className="surface p-4">
+                  <DailyBars
+                    daily={r.daily}
+                    average={r.dailyAverage}
+                    currency={currency}
+                    today={r.isCurrent ? today : undefined}
+                  />
+                </div>
+              </Section>
+
+              <Section index={3} title="آخر 6 أشهر">
+                <div className="surface p-4">
+                  <TrendBars trend={r.trend} month={month} currency={currency} />
+                </div>
+              </Section>
+
+              {r.byMethod.length > 0 && (
+                <Section index={4} title="طرق الدفع">
+                  <PaymentBreakdown items={r.byMethod} total={r.total} currency={currency} />
+                </Section>
+              )}
+
+              <Section index={5} title="أكبر 5 مصاريف">
+                <div className="surface inset-list overflow-hidden">
+                  {r.top.map((e) => (
+                    <ExpenseItem key={e.id} expense={e} currency={currency} meta={formatShortDate(e.date)} />
+                  ))}
+                </div>
+              </Section>
+
+              <Reveal index={6}>
+                <a
+                  href={`/api/export?month=${month}`}
+                  download
+                  className="surface flex items-center gap-3 py-1 ps-4 active:bg-foreground/[0.06]"
+                >
+                  <span className="flex size-7 items-center justify-center rounded-[8px] bg-[#34c759] text-white">
+                    <DownloadIcon className="size-4" strokeWidth={2.3} />
+                  </span>
+                  <span className="flex min-h-11 flex-1 items-center justify-between pe-3">
+                    <span>
+                      <span className="block text-[16px]">تصدير الشهر</span>
+                      <span className="block text-[12px] text-muted-foreground">ملف CSV يُفتح في Excel</span>
+                    </span>
+                    <ChevronLeftIcon className="size-5 text-muted-foreground/60" />
+                  </span>
+                </a>
+              </Reveal>
+            </>
+          )}
+        </div>
+      </ViewTransition>
     </div>
   );
 }
 
-function Card({
+function Section({
   title,
   subtitle,
+  index,
   children,
 }: {
   title: string;
   subtitle?: string;
+  index: number;
   children: React.ReactNode;
 }) {
   return (
-    <section className="surface p-4">
-      <h2 className="font-semibold">{title}</h2>
-      {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
-      <div className="mt-4">{children}</div>
-    </section>
+    <Reveal as="section" index={index} className="space-y-2.5">
+      <div className="px-1">
+        <h2 className="text-[20px] font-bold">{title}</h2>
+        {subtitle && <p className="text-[13px] text-muted-foreground">{subtitle}</p>}
+      </div>
+      {children}
+    </Reveal>
   );
 }
 
-function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Metric({
+  icon: Icon,
+  tint,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  tint: string;
+  label: string;
+  value: string;
+}) {
   return (
-    <div>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 font-semibold tabular">{value}</dd>
-      {hint && <dd className="text-xs text-muted-foreground tabular">{hint}</dd>}
+    <div className="surface p-4">
+      <div className="flex items-center gap-2">
+        <span
+          className="flex size-7 shrink-0 items-center justify-center rounded-full"
+          style={{ backgroundColor: `${tint}1f`, color: tint }}
+        >
+          <Icon className="size-4" strokeWidth={2.4} />
+        </span>
+        <span className="truncate text-[13px] font-medium text-muted-foreground">{label}</span>
+      </div>
+      <p className="mt-2.5 truncate text-[20px] font-bold leading-tight tabular" dir="ltr">
+        {value}
+      </p>
     </div>
   );
 }
 
-function ChangeBadge({ change }: { change: number }) {
-  // Spending more is "bad" → red; spending less → green.
+/** Spending more is "bad": icon + words carry the meaning, colour backs it up. */
+function ChangeBadge({ change, prev }: { change: number; prev: string }) {
   const up = change > 0;
   const Icon = up ? TrendingUpIcon : TrendingDownIcon;
   return (
-    <span
-      className={cn(
-        "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
-        up
-          ? "bg-red-500/10 text-red-600 dark:text-red-400"
-          : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-      )}
-    >
-      <Icon className="size-3.5" />
-      {formatPercent(Math.abs(change))} {up ? "أكثر" : "أقل"} من الشهر السابق
-    </span>
+    <div className="mt-2 flex flex-col items-center gap-1">
+      <span
+        className={cn(
+          "flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-semibold",
+          up
+            ? "bg-[#ff3b30]/12 text-[#d70015] dark:text-[#ff6961]"
+            : "bg-[#34c759]/14 text-[#248a3d] dark:text-[#30d158]",
+        )}
+      >
+        <Icon className="size-4" />
+        {formatPercent(Math.abs(change))} {up ? "أكثر" : "أقل"} من الشهر السابق
+      </span>
+      <span className="text-[12px] text-muted-foreground">الشهر السابق: {prev}</span>
+    </div>
   );
 }
 
-function BudgetLine({
-  spent,
-  budget,
-  currency,
-}: {
-  spent: number;
-  budget: number;
-  currency: string;
-}) {
+function BudgetLine({ spent, budget, currency }: { spent: number; budget: number; currency: string }) {
   const ratio = spent / budget;
   const over = ratio > 1;
+  const tone = over ? "#ff3b30" : ratio >= 0.8 ? "#ff9f0a" : "var(--primary)";
   return (
-    <div className="mt-4 space-y-1.5 border-t pt-4">
-      <div className="flex justify-between text-xs">
+    <div className="mt-4 w-full space-y-1.5">
+      <div className="flex justify-between text-[12px]">
         <span className="text-muted-foreground">الميزانية</span>
-        <span className={cn("font-medium tabular", over && "text-destructive")}>
+        <span className={cn("font-semibold tabular", over && "text-destructive")}>
           {formatPercent(ratio)} من {formatMoney(budget, currency)}
         </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-muted">
+      <div
+        className="h-2 overflow-hidden rounded-full bg-foreground/[0.07] dark:bg-white/10"
+        role="progressbar"
+        aria-label="نسبة استهلاك الميزانية"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(Math.min(ratio, 1) * 100)}
+      >
         <div
-          className={cn(
-            "h-full rounded-full",
-            over ? "bg-destructive" : ratio > 0.8 ? "bg-amber-500" : "bg-primary",
-          )}
-          style={{ width: `${Math.min(ratio, 1) * 100}%` }}
+          className="h-full rounded-full transition-[width] duration-700"
+          style={{ width: `${Math.min(ratio, 1) * 100}%`, backgroundColor: tone }}
         />
       </div>
     </div>
@@ -247,11 +303,14 @@ function BudgetLine({
 
 function ReportSkeleton() {
   return (
-    <div className="space-y-5" aria-busy>
-      <Skeleton className="h-14 rounded-2xl" />
-      <Skeleton className="h-48 rounded-3xl" />
-      <Skeleton className="h-80 rounded-2xl" />
-      <Skeleton className="h-56 rounded-2xl" />
+    <div className="space-y-7" aria-busy>
+      <Skeleton className="h-[200px] rounded-[22px]" />
+      <div className="grid grid-cols-2 gap-3">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-[92px] rounded-[22px]" />
+        ))}
+      </div>
+      <Skeleton className="h-72 rounded-[22px]" />
     </div>
   );
 }

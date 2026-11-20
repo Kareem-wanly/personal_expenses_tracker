@@ -78,6 +78,10 @@
   --chart-3: #ff9f0a;
   --chart-4: #bf5af2;
   --chart-5: #ff375f;
+  /* Validated categorical slots (dataviz palette, checked on --card). */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
 
   /* Materials */
   --glass: rgb(250 250 252 / 0.72);
@@ -122,6 +126,9 @@
   --chart-3: #ff9f0a;
   --chart-4: #bf5af2;
   --chart-5: #ff375f;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
 
   --glass: rgb(34 34 36 / 0.66);
   --glass-border: rgb(255 255 255 / 0.09);

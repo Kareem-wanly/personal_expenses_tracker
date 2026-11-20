@@ -18,39 +18,48 @@ export function SpendingBreakdown({
   total,
   currency,
   limit = 4,
+  bar = true,
 }: {
   items: CategoryTotal[];
   total: number;
   currency: string;
   limit?: number;
+  /** Hide the segmented bar when a chart above already shows proportions. */
+  bar?: boolean;
 }) {
   const shown = items.slice(0, limit);
   const rest = items.slice(limit);
   const restTotal = rest.reduce((a, c) => a + c.total, 0);
-  const segments = restTotal > 0
-    ? [...shown, { categoryId: "rest", name: "أخرى", icon: "•", color: "#8e8e93", total: restTotal, count: 0 }]
-    : shown;
+  const segments =
+    restTotal > 0
+      ? [
+          ...shown,
+          { categoryId: "rest", name: "أخرى", icon: "•", color: "#8e8e93", total: restTotal, count: 0 },
+        ]
+      : shown;
 
   return (
     <div className="surface p-4">
-      <div
-        className="flex h-3.5 gap-[3px] overflow-hidden rounded-full"
-        role="img"
-        aria-label="توزيع المصاريف حسب التصنيف"
-      >
-        {segments.map((c, i) => (
-          <motion.span
-            key={c.categoryId ?? "none"}
-            className="h-full min-w-1.5 origin-right first:rounded-s-full last:rounded-e-full"
-            style={{ backgroundColor: c.color, flexGrow: total > 0 ? c.total / total : 0 }}
-            initial={{ scaleX: 0, opacity: 0 }}
-            animate={{ scaleX: 1, opacity: 1 }}
-            transition={{ duration: 0.7, ease: EASE, delay: 0.15 + i * 0.06 }}
-          />
-        ))}
-      </div>
+      {bar && (
+        <div
+          className="flex h-3.5 gap-[3px] overflow-hidden rounded-full"
+          role="img"
+          aria-label="توزيع المصاريف حسب التصنيف"
+        >
+          {segments.map((c, i) => (
+            <motion.span
+              key={c.categoryId ?? "none"}
+              className="h-full min-w-1.5 origin-right first:rounded-s-full last:rounded-e-full"
+              style={{ backgroundColor: c.color, flexGrow: total > 0 ? c.total / total : 0 }}
+              initial={{ scaleX: 0, opacity: 0 }}
+              animate={{ scaleX: 1, opacity: 1 }}
+              transition={{ duration: 0.7, ease: EASE, delay: 0.15 + i * 0.06 }}
+            />
+          ))}
+        </div>
+      )}
 
-      <ul className="inset-list mt-3">
+      <ul className={bar ? "inset-list mt-3" : "inset-list -my-1"}>
         {shown.map((c) => (
           <li key={c.categoryId ?? "none"} className="flex items-center gap-3">
             <CategoryIcon icon={c.icon} color={c.color} className="size-8 rounded-[9px] text-[15px]" />
