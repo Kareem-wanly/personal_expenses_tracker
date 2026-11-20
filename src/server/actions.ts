@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, max } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, max } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -12,19 +12,30 @@ import {
   category,
   expense,
   pushSubscription,
+  recurringExpense,
   user as userTable,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { getCurrentUser, requireUser } from "@/lib/dal";
-import { TZ_COOKIE, monthOf, todayISO } from "@/lib/dates";
+import { type CurrentUser, getCurrentUser, requireUser } from "@/lib/dal";
+import { TZ_COOKIE, addDays as addDaysISO, monthOf, todayISO } from "@/lib/dates";
 import { toMinor } from "@/lib/money";
-import { budgetAlert, monthTotal } from "@/lib/notifications";
+import {
+  budgetAlert,
+  categoryBudgetAlert,
+  categoryMonthTotal,
+  monthTotal,
+} from "@/lib/notifications";
 import { pushEnabled, sendPushToUser } from "@/lib/push";
+import { FREQUENCY_LABELS, dueOccurrences, nextOccurrence } from "@/lib/recurrence";
+import { countExpenses } from "@/lib/plural";
+import { materializeRecurring } from "@/lib/recurring";
 import {
   type ActionState,
   categorySchema,
   expenseSchema,
   fromZodError,
+  quickAddSchema,
+  recurringSchema,
   settingsSchema,
 } from "@/lib/validations";
 
@@ -42,6 +53,77 @@ async function assertCategoryOwned(userId: string, categoryId: string | null) {
   return !!row;
 }
 
+async function allCategoriesOwned(userId: string, ids: (string | null)[]) {
+  const wanted = [...new Set(ids.filter((v): v is string => !!v))];
+  if (!wanted.length) return true;
+  const rows = await db
+    .select({ id: category.id })
+    .from(category)
+    .where(and(eq(category.userId, userId), inArray(category.id, wanted)));
+  return rows.length === wanted.length;
+}
+
+/**
+ * Snapshot budget totals *before* a change, and return a function that,
+ * once the change is saved, sends an alert for every budget the change
+ * pushed past 80% / 100% (overall monthly budget and per-category budgets).
+ * The sending runs in `after()`, so saving never waits on push services.
+ */
+async function watchBudgets(
+  user: CurrentUser,
+  dates: string[],
+  categoryIds: (string | null)[],
+): Promise<(() => void) | null> {
+  if (!pushEnabled || !user.notifyBudget) return null;
+  const month = monthOf(todayISO(user.timezone));
+  if (!dates.some((d) => monthOf(d) === month)) return null;
+
+  const ids = [...new Set(categoryIds.filter((v): v is string => !!v))];
+  const cats = ids.length
+    ? await db
+        .select({ id: category.id, name: category.name, icon: category.icon, budget: category.budget })
+        .from(category)
+        .where(
+          and(eq(category.userId, user.id), inArray(category.id, ids), isNotNull(category.budget)),
+        )
+    : [];
+  if (!user.monthlyBudget && !cats.length) return null;
+
+  const [overallBefore, ...catBefore] = await Promise.all([
+    user.monthlyBudget ? monthTotal(user.id, month) : Promise.resolve(0),
+    ...cats.map((c) => categoryMonthTotal(user.id, c.id, month)),
+  ]);
+
+  return () =>
+    after(async () => {
+      const alerts = [];
+      if (user.monthlyBudget) {
+        alerts.push(
+          budgetAlert({
+            before: overallBefore,
+            after: await monthTotal(user.id, month),
+            budget: user.monthlyBudget,
+            currency: user.currency,
+            month,
+          }),
+        );
+      }
+      for (const [i, c] of cats.entries()) {
+        alerts.push(
+          categoryBudgetAlert({
+            before: catBefore[i],
+            after: await categoryMonthTotal(user.id, c.id, month),
+            budget: c.budget!,
+            currency: user.currency,
+            month,
+            category: c,
+          }),
+        );
+      }
+      for (const alert of alerts) if (alert) await sendPushToUser(user.id, alert);
+    });
+}
+
 export async function saveExpense(
   _prev: ActionState,
   formData: FormData,
@@ -50,7 +132,7 @@ export async function saveExpense(
   const parsed = expenseSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fromZodError(parsed.error);
 
-  const { id, amount, categoryId, date, note, paymentMethod } = parsed.data;
+  const { id, amount, categoryId, date, note, paymentMethod, repeat } = parsed.data;
 
   if (!(await assertCategoryOwned(user.id, categoryId))) {
     return { ok: false, message: "التصنيف غير موجود" };
@@ -64,38 +146,69 @@ export async function saveExpense(
     paymentMethod,
   };
 
-  // Budget alerts only concern the current month (in the user's time zone).
-  const currentMonth = monthOf(todayISO(user.timezone));
-  const watchBudget =
-    pushEnabled && user.notifyBudget && !!user.monthlyBudget && monthOf(date) === currentMonth;
-  const before = watchBudget ? await monthTotal(user.id, currentMonth) : 0;
+  const notifyBudgets = await watchBudgets(user, [date], [categoryId]);
 
+  let message = id ? "تم تحديث المصروف" : "تمت إضافة المصروف";
   if (id) {
     const res = await db
       .update(expense)
       .set(values)
       .where(and(eq(expense.id, id), eq(expense.userId, user.id)));
     if (res.rowsAffected === 0) return { ok: false, message: "المصروف غير موجود" };
+  } else if (repeat !== "none") {
+    // This expense is the first occurrence of a new recurring rule.
+    const [rule] = await db
+      .insert(recurringExpense)
+      .values({
+        ...values,
+        userId: user.id,
+        frequency: repeat,
+        startDate: date,
+        nextDate: nextOccurrence(date, repeat, date),
+      })
+      .returning({ id: recurringExpense.id });
+    await db.insert(expense).values({ ...values, userId: user.id, recurringId: rule.id });
+    // Started in the past? Fill in the occurrences since then.
+    await materializeRecurring(user.id, todayISO(user.timezone));
+    message = `تمت الإضافة، وسيتكرر ${FREQUENCY_LABELS[repeat]}`;
   } else {
     await db.insert(expense).values({ ...values, userId: user.id });
   }
 
-  if (watchBudget) {
-    // Runs after the response is sent: saving never waits on the push service.
-    after(async () => {
-      const alert = budgetAlert({
-        before,
-        after: await monthTotal(user.id, currentMonth),
-        budget: user.monthlyBudget!,
-        currency: user.currency,
-        month: currentMonth,
-      });
-      if (alert) await sendPushToUser(user.id, alert);
-    });
+  notifyBudgets?.();
+  refresh();
+  return { ok: true, message };
+}
+
+/** Save several expenses parsed from one sentence ("قهوة 5 وسندويشة 7"). */
+export async function addExpensesBatch(items: unknown): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = quickAddSchema.safeParse(items);
+  if (!parsed.success) return { ok: false, message: "تعذّر قراءة المصاريف" };
+  const rows = parsed.data;
+
+  if (!(await allCategoriesOwned(user.id, rows.map((r) => r.categoryId)))) {
+    return { ok: false, message: "التصنيف غير موجود" };
   }
 
+  const notifyBudgets = await watchBudgets(
+    user,
+    rows.map((r) => r.date),
+    rows.map((r) => r.categoryId),
+  );
+  await db.insert(expense).values(
+    rows.map((r) => ({
+      userId: user.id,
+      amount: toMinor(r.amount),
+      categoryId: r.categoryId,
+      date: r.date,
+      note: r.note || null,
+      paymentMethod: r.paymentMethod,
+    })),
+  );
+  notifyBudgets?.();
   refresh();
-  return { ok: true, message: id ? "تم تحديث المصروف" : "تمت إضافة المصروف" };
+  return { ok: true, message: `تمت إضافة ${countExpenses(rows.length)}` };
 }
 
 export async function deleteExpense(id: string): Promise<ActionState> {
@@ -114,7 +227,8 @@ export async function saveCategory(
   const user = await requireUser();
   const parsed = categorySchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fromZodError(parsed.error);
-  const { id, ...values } = parsed.data;
+  const { id, budget, ...rest } = parsed.data;
+  const values = { ...rest, budget: budget === null ? null : toMinor(budget) };
 
   try {
     if (id) {
@@ -144,6 +258,81 @@ export async function saveCategory(
 
   refresh();
   return { ok: true, message: id ? "تم تحديث التصنيف" : "تمت إضافة التصنيف" };
+}
+
+/* --------------------------- Recurring expenses --------------------------- */
+
+export async function saveRecurring(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const parsed = recurringSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return fromZodError(parsed.error);
+  const { id, amount, categoryId, note, paymentMethod, frequency, nextDate } = parsed.data;
+
+  if (!(await assertCategoryOwned(user.id, categoryId))) {
+    return { ok: false, message: "التصنيف غير موجود" };
+  }
+  if (nextDate < todayISO(user.timezone)) {
+    return { ok: false, message: "اختر موعداً اليوم أو بعده", fieldErrors: { nextDate: ["اختر موعداً اليوم أو بعده"] } };
+  }
+
+  // Editing re-anchors the schedule on the chosen next date.
+  const res = await db
+    .update(recurringExpense)
+    .set({
+      amount: toMinor(amount),
+      categoryId,
+      note,
+      paymentMethod,
+      frequency,
+      nextDate,
+      startDate: nextDate,
+    })
+    .where(and(eq(recurringExpense.id, id), eq(recurringExpense.userId, user.id)));
+  if (res.rowsAffected === 0) return { ok: false, message: "المصروف المتكرر غير موجود" };
+
+  await materializeRecurring(user.id, todayISO(user.timezone));
+  refresh();
+  return { ok: true, message: "تم حفظ المصروف المتكرر" };
+}
+
+export async function setRecurringActive(id: string, active: boolean): Promise<ActionState> {
+  const user = await requireUser();
+  const rule = await db.query.recurringExpense.findFirst({
+    where: and(eq(recurringExpense.id, id), eq(recurringExpense.userId, user.id)),
+  });
+  if (!rule) return { ok: false, message: "المصروف المتكرر غير موجود" };
+
+  let nextDate = rule.nextDate;
+  if (active) {
+    // Resuming doesn't back-fill the paused period: skip to the next
+    // occurrence from today on.
+    const today = todayISO(user.timezone);
+    const { next } = dueOccurrences(rule, addDaysISO(today, -1));
+    nextDate = next;
+  }
+  await db
+    .update(recurringExpense)
+    .set({ active, nextDate })
+    .where(eq(recurringExpense.id, rule.id));
+  refresh();
+  return { ok: true, message: active ? "تم استئناف التكرار" : "تم إيقاف التكرار مؤقتاً" };
+}
+
+export async function deleteRecurring(id: string): Promise<ActionState> {
+  const user = await requireUser();
+  // Past expenses stay; they just stop pointing at the deleted rule.
+  await db
+    .update(expense)
+    .set({ recurringId: null })
+    .where(and(eq(expense.recurringId, id), eq(expense.userId, user.id)));
+  await db
+    .delete(recurringExpense)
+    .where(and(eq(recurringExpense.id, id), eq(recurringExpense.userId, user.id)));
+  refresh();
+  return { ok: true, message: "تم حذف المصروف المتكرر" };
 }
 
 export async function deleteCategory(id: string): Promise<ActionState> {
@@ -257,6 +446,7 @@ const prefsSchema = z.object({
   notifyBudget: z.boolean(),
   notifyDailyReminder: z.boolean(),
   notifyMonthlySummary: z.boolean(),
+  notifyRecurring: z.boolean(),
 });
 
 export async function updateNotificationPrefs(

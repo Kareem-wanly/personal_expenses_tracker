@@ -6,6 +6,7 @@ import {
   type LucideIcon,
   Loader2Icon,
   MoonStarIcon,
+  RepeatIcon,
   SendIcon,
   TriangleAlertIcon,
 } from "lucide-react";
@@ -30,6 +31,7 @@ type Prefs = {
   notifyBudget: boolean;
   notifyDailyReminder: boolean;
   notifyMonthlySummary: boolean;
+  notifyRecurring: boolean;
 };
 
 const PREF_ITEMS: {
@@ -59,6 +61,13 @@ const PREF_ITEMS: {
     tint: "#30b0c7",
     title: "الملخص الشهري",
     description: "في أول كل شهر: كم صرفت ومقارنة بالشهر السابق.",
+  },
+  {
+    key: "notifyRecurring",
+    icon: RepeatIcon,
+    tint: "#34c759",
+    title: "المصاريف المتكررة",
+    description: "تنبيه مساء اليوم السابق لإضافة اشتراك أو فاتورة متكررة.",
   },
 ];
 

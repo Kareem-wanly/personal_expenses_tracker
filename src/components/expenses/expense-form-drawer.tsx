@@ -7,6 +7,8 @@ import {
   Loader2Icon,
   type LucideIcon,
   PencilLineIcon,
+  RepeatIcon,
+  SparklesIcon,
   Trash2Icon,
 } from "lucide-react";
 import { AnimatePresence, motion, useAnimate } from "motion/react";
@@ -29,11 +31,13 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/compone
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { addDays, toISODate } from "@/lib/dates";
-import { fromMinor } from "@/lib/money";
+import { formatMoney, fromMinor, toMinor } from "@/lib/money";
+import { countExpenses } from "@/lib/plural";
+import { type DraftExpense, parseCommand } from "@/lib/quick-add/parse";
 import { cn } from "@/lib/utils";
 import type { ActionState } from "@/lib/validations";
-import type { PaymentMethod } from "@/db/schema";
-import { deleteExpense, saveExpense } from "@/server/actions";
+import type { Frequency, PaymentMethod } from "@/db/schema";
+import { addExpensesBatch, deleteExpense, saveExpense } from "@/server/actions";
 import type { CategoryOption } from "@/server/queries";
 
 import {
@@ -100,6 +104,11 @@ function ExpenseForm({
     date === today ? "today" : date === yesterday ? "yesterday" : "other",
   );
   const [method, setMethod] = useState<PaymentMethod>(expense?.paymentMethod ?? "cash");
+  const [note, setNote] = useState(expense?.note ?? "");
+  const [repeat, setRepeat] = useState<"none" | Frequency>("none");
+  const [quick, setQuick] = useState("");
+  const [batch, setBatch] = useState<DraftExpense[]>([]);
+  const [batchPending, startBatch] = useTransition();
   const [amountScope, animateAmount] = useAnimate<HTMLDivElement>();
 
   useEffect(() => {
@@ -125,10 +134,46 @@ function ExpenseForm({
     if (mode === "yesterday") setDate(yesterday);
   }
 
+  /**
+   * Quick entry: "قهوة 5 بطاقة مبارح" fills the form as you type (parsed on
+   * the device, no network). Several items ("قهوة 5 وسندويشة 7") are offered
+   * as a one-tap batch add instead.
+   */
+  function onQuickChange(text: string) {
+    setQuick(text);
+    const cmd = parseCommand(text, { today, categories });
+    const items = cmd.kind === "add" ? cmd.items.filter((i) => i.amount !== null) : [];
+    setBatch(items.length > 1 ? items : []);
+    const first = cmd.kind === "add" ? cmd.items[0] : undefined;
+    if (!first || items.length > 1) return;
+    if (first.amount !== null) setAmount(String(first.amount));
+    if (first.categoryId) setCategoryId(first.categoryId);
+    setDate(first.date);
+    setDateMode(first.date === today ? "today" : first.date === yesterday ? "yesterday" : "other");
+    setMethod(first.paymentMethod);
+    setNote(first.note ?? "");
+  }
+
+  function addBatch() {
+    startBatch(async () => {
+      const res = await addExpensesBatch(batch);
+      if (res.ok) {
+        navigator.vibrate?.(10);
+        toast.success(res.message);
+        closeExpenseForm();
+      } else {
+        toast.error(res.message);
+      }
+    });
+  }
+
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
+
   return (
     <form action={formAction} className="flex min-h-0 flex-1 flex-col">
       {expense && <input type="hidden" name="id" value={expense.id} />}
       <input type="hidden" name="date" value={date} />
+      {!expense && <input type="hidden" name="repeat" value={repeat} />}
 
       {/* Sheet navigation bar */}
       <div className="relative flex h-11 shrink-0 items-center justify-between px-4">
@@ -147,6 +192,69 @@ function ExpenseForm({
       </div>
 
       <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 pb-4">
+        {/* Quick entry (new expenses only) */}
+        {!expense && (
+          <div className="space-y-2 pt-1">
+            <label className="surface flex h-11 items-center gap-2 px-3 has-focus-visible:ring-2 has-focus-visible:ring-ring">
+              <SparklesIcon className="size-[18px] shrink-0 text-primary" />
+              <span className="sr-only">إدخال سريع</span>
+              <input
+                value={quick}
+                onChange={(e) => onQuickChange(e.target.value)}
+                placeholder="اكتب بسرعة: قهوة 5 بطاقة مبارح"
+                autoComplete="off"
+                enterKeyHint="done"
+                className="h-full min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground"
+              />
+            </label>
+            <AnimatePresence initial={false}>
+              {batch.length > 1 && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="surface space-y-2 p-3">
+                    <p className="text-[13px] font-medium text-muted-foreground">
+                      تعرّفت على {countExpenses(batch.length)}:
+                    </p>
+                    <ul className="space-y-1.5">
+                      {batch.map((b, i) => {
+                        const c = b.categoryId ? categoryById.get(b.categoryId) : undefined;
+                        return (
+                          <li key={i} className="flex items-center gap-2 text-[15px]">
+                            <span aria-hidden>{c?.icon ?? "❔"}</span>
+                            <span className="min-w-0 flex-1 truncate">
+                              {b.note || c?.name || "غير مصنّف"}
+                            </span>
+                            <span className="font-semibold tabular">
+                              {formatMoney(toMinor(b.amount!), currency)}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={addBatch}
+                      disabled={batchPending}
+                      className="tint-button flex h-10 w-full items-center justify-center gap-2 rounded-full text-[15px] font-semibold disabled:opacity-70"
+                    >
+                      {batchPending ? (
+                        <Loader2Icon className="size-4 animate-spin" />
+                      ) : (
+                        <CheckIcon className="size-4" strokeWidth={2.6} />
+                      )}
+                      أضف الكل ({batch.length})
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
         {/* Amount */}
         <div ref={amountScope} className="flex flex-col items-center pt-3">
           <label htmlFor="amount" className="sr-only">
@@ -298,6 +406,22 @@ function ExpenseForm({
               }))}
             />
           </Row>
+          {!expense && (
+            <Row icon={RepeatIcon} tint="#5e5ce6" label="التكرار">
+              <SegmentedControl
+                label="التكرار"
+                value={repeat}
+                onChange={setRepeat}
+                className="w-56"
+                options={[
+                  { value: "none", label: "لا" },
+                  { value: "weekly", label: "أسبوعي" },
+                  { value: "monthly", label: "شهري" },
+                  { value: "yearly", label: "سنوي" },
+                ]}
+              />
+            </Row>
+          )}
           <Row icon={PencilLineIcon} tint="#8e8e93">
             <label htmlFor="note" className="sr-only">
               ملاحظة
@@ -306,13 +430,27 @@ function ExpenseForm({
               id="note"
               name="note"
               maxLength={120}
-              defaultValue={expense?.note ?? ""}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
               placeholder="ملاحظة (اختياري)"
               className="h-9 w-full bg-transparent text-[16px] outline-none placeholder:text-muted-foreground"
             />
           </Row>
         </div>
         {errors.note && <p className="px-1 text-[13px] text-destructive">{errors.note[0]}</p>}
+        {repeat !== "none" && (
+          <p className="px-1 text-[13px] text-muted-foreground">
+            🔁 سيُضاف هذا المصروف تلقائياً كل{" "}
+            {repeat === "weekly" ? "أسبوع" : repeat === "monthly" ? "شهر" : "سنة"}، ويمكنك إيقافه أو
+            تعديله من الإعدادات.
+          </p>
+        )}
+        {expense?.recurringId && (
+          <p className="px-1 text-[13px] text-muted-foreground">
+            🔁 هذا المصروف من مصروف متكرر. تعديله هنا يغيّر هذه المرة فقط؛ لتغيير التكرار افتح
+            الإعدادات ← المصاريف المتكررة.
+          </p>
+        )}
       </div>
 
       <div className="shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">

@@ -31,6 +31,7 @@ export const getCurrentUser = cache(async () => {
       notifyBudget: true,
       notifyDailyReminder: true,
       notifyMonthlySummary: true,
+      notifyRecurring: true,
     },
   });
   return row ?? null;

@@ -20,7 +20,7 @@ import {
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
 import { Group, RowButton } from "@/components/ui/grouped-list";
 import { CATEGORY_COLORS, CATEGORY_ICONS } from "@/lib/constants";
-import { formatNumber } from "@/lib/money";
+import { formatMoney, formatNumber, fromMinor } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { ActionState } from "@/lib/validations";
 import { deleteCategory, saveCategory } from "@/server/actions";
@@ -30,12 +30,20 @@ type Item = {
   name: string;
   icon: string;
   color: string;
+  /** Monthly budget in minor units, if set. */
+  budget: number | null;
   expenseCount: number;
 };
 
 const SPRING = { type: "spring", stiffness: 520, damping: 30 } as const;
 
-export function CategoryManager({ categories }: { categories: Item[] }) {
+export function CategoryManager({
+  categories,
+  currency,
+}: {
+  categories: Item[];
+  currency: string;
+}) {
   const [editing, setEditing] = useState<Item | null>(null);
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
@@ -55,6 +63,7 @@ export function CategoryManager({ categories }: { categories: Item[] }) {
             onClick={() => openForm(c)}
             leading={<CategoryIcon icon={c.icon} color={c.color} className="size-[30px] rounded-[8px] text-[16px]" />}
             title={c.name}
+            subtitle={c.budget != null ? `ميزانية ${formatMoney(c.budget, currency)} شهرياً` : undefined}
             trailing={
               <span className="text-[15px] text-muted-foreground tabular">
                 {formatNumber(c.expenseCount)}
@@ -80,6 +89,7 @@ export function CategoryManager({ categories }: { categories: Item[] }) {
           <CategoryForm
             key={formKey}
             item={editing}
+            currency={currency}
             onDone={() => setOpen(false)}
           />
         </DrawerContent>
@@ -88,7 +98,15 @@ export function CategoryManager({ categories }: { categories: Item[] }) {
   );
 }
 
-function CategoryForm({ item, onDone }: { item: Item | null; onDone: () => void }) {
+function CategoryForm({
+  item,
+  currency,
+  onDone,
+}: {
+  item: Item | null;
+  currency: string;
+  onDone: () => void;
+}) {
   const [state, action, pending] = useActionState<ActionState, FormData>(saveCategory, {
     ok: false,
   });
@@ -169,6 +187,34 @@ function CategoryForm({ item, onDone }: { item: Item | null; onDone: () => void 
             </motion.p>
           )}
         </AnimatePresence>
+
+        <div>
+          <label
+            htmlFor="cat-budget"
+            className="mb-2 block px-1 text-[13px] font-medium text-muted-foreground"
+          >
+            ميزانية شهرية (اختياري)
+          </label>
+          <div className="surface flex items-center gap-2 px-4">
+            <input
+              id="cat-budget"
+              name="budget"
+              inputMode="decimal"
+              dir="ltr"
+              autoComplete="off"
+              placeholder="بدون"
+              defaultValue={item?.budget != null ? String(fromMinor(item.budget)) : ""}
+              aria-invalid={!!state.fieldErrors?.budget}
+              className="h-12 min-w-0 flex-1 bg-transparent text-[17px] tabular outline-none placeholder:text-muted-foreground"
+            />
+            <span className="text-[13px] font-semibold text-muted-foreground">{currency}</span>
+          </div>
+          <p className="mt-1.5 px-1 text-[13px] text-muted-foreground">
+            {state.fieldErrors?.budget
+              ? "أدخل مبلغاً صحيحاً أو اتركه فارغاً"
+              : "نعرض تقدّمك عليها، وننبّهك عند 80% منها وعند تجاوزها."}
+          </p>
+        </div>
 
         <fieldset>
           <legend className="mb-2 px-1 text-[13px] font-medium text-muted-foreground">اللون</legend>

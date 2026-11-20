@@ -8,6 +8,7 @@ import { Reveal } from "@/components/motion/reveal";
 import { CategoryManager } from "@/components/settings/category-manager";
 import { InstallApp } from "@/components/settings/install-app";
 import { NotificationSettings } from "@/components/settings/notification-settings";
+import { RecurringManager } from "@/components/settings/recurring-manager";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { ThemeSwitcher } from "@/components/settings/theme-switcher";
 import { Group, RowButton } from "@/components/ui/grouped-list";
@@ -15,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { APP_NAME } from "@/lib/constants";
 import { requireUser } from "@/lib/dal";
 import { signOutAction } from "@/server/actions";
-import { getCategoriesWithUsage } from "@/server/queries";
+import { getCategories, getCategoriesWithUsage, getRecurring } from "@/server/queries";
 
 export const metadata: Metadata = { title: "الإعدادات" };
 
@@ -31,6 +32,12 @@ export default function SettingsPage() {
         <Suspense fallback={<Skeleton className="h-96 rounded-[22px]" />}>
           <Reveal index={1}>
             <Categories />
+          </Reveal>
+        </Suspense>
+
+        <Suspense fallback={<Skeleton className="h-40 rounded-[22px]" />}>
+          <Reveal index={2}>
+            <Recurring />
           </Reveal>
         </Suspense>
 
@@ -101,12 +108,22 @@ async function Notifications() {
         notifyBudget: user.notifyBudget,
         notifyDailyReminder: user.notifyDailyReminder,
         notifyMonthlySummary: user.notifyMonthlySummary,
+        notifyRecurring: user.notifyRecurring,
       }}
     />
   );
 }
 
+async function Recurring() {
+  const [user, rules, categories] = await Promise.all([
+    requireUser(),
+    getRecurring(),
+    getCategories(),
+  ]);
+  return <RecurringManager rules={rules} categories={categories} currency={user.currency} />;
+}
+
 async function Categories() {
-  const categories = await getCategoriesWithUsage();
-  return <CategoryManager categories={categories} />;
+  const [user, categories] = await Promise.all([requireUser(), getCategoriesWithUsage()]);
+  return <CategoryManager categories={categories} currency={user.currency} />;
 }

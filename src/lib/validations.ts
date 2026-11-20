@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { PAYMENT_METHODS } from "@/db/schema";
+import { FREQUENCIES, PAYMENT_METHODS } from "@/db/schema";
 import { CURRENCIES } from "@/lib/constants";
 import { DATE_RE } from "@/lib/dates";
 
@@ -24,6 +24,18 @@ const amount = z
       .max(1_000_000_000, "المبلغ كبير جداً"),
   );
 
+/** Optional money field: "" → null, otherwise a non-negative number. */
+const optionalAmount = z
+  .string()
+  .optional()
+  .transform((v) => (v ? normalizeAmountInput(v) : ""))
+  .pipe(
+    z.union([
+      z.literal("").transform(() => null),
+      z.coerce.number<string>().min(0).max(1_000_000_000),
+    ]),
+  );
+
 const optionalText = (max: number) =>
   z
     .string()
@@ -42,13 +54,43 @@ export const expenseSchema = z.object({
   date: z.string().regex(DATE_RE, "تاريخ غير صالح"),
   note: optionalText(120),
   paymentMethod: z.enum(PAYMENT_METHODS).default("cash"),
+  /** New expenses only: also create a recurring rule from this one. */
+  repeat: z.enum(["none", ...FREQUENCIES]).default("none"),
 });
+
+export const recurringSchema = z.object({
+  id: z.string().min(1),
+  amount,
+  categoryId: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v : null)),
+  note: optionalText(120),
+  paymentMethod: z.enum(PAYMENT_METHODS).default("cash"),
+  frequency: z.enum(FREQUENCIES),
+  nextDate: z.string().regex(DATE_RE, "تاريخ غير صالح"),
+});
+
+/** Several expenses parsed from one sentence ("قهوة 5 وسندويشة 7"). */
+export const quickAddSchema = z
+  .array(
+    z.object({
+      amount: z.number().positive().max(1_000_000_000),
+      categoryId: z.string().nullable(),
+      date: z.string().regex(DATE_RE),
+      note: z.string().trim().max(120).nullable(),
+      paymentMethod: z.enum(PAYMENT_METHODS),
+    }),
+  )
+  .min(1)
+  .max(20);
 
 export const categorySchema = z.object({
   id: z.string().optional(),
   name: z.string().trim().min(1, "أدخل اسم التصنيف").max(30, "الاسم طويل جداً"),
   icon: z.string().min(1).max(8),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "لون غير صالح"),
+  budget: optionalAmount,
 });
 
 const currencyCodes = CURRENCIES.map((c) => c.code) as [string, ...string[]];
@@ -56,16 +98,7 @@ const currencyCodes = CURRENCIES.map((c) => c.code) as [string, ...string[]];
 export const settingsSchema = z.object({
   name: z.string().trim().min(1, "أدخل الاسم").max(50),
   currency: z.enum(currencyCodes),
-  monthlyBudget: z
-    .string()
-    .optional()
-    .transform((v) => (v ? normalizeAmountInput(v) : ""))
-    .pipe(
-      z.union([
-        z.literal("").transform(() => null),
-        z.coerce.number<string>().min(0).max(1_000_000_000),
-      ]),
-    ),
+  monthlyBudget: optionalAmount,
 });
 
 export type ActionState = {

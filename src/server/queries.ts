@@ -3,9 +3,10 @@ import "server-only";
 import { and, asc, between, desc, eq, like, sql, sum, count } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
+import { cache } from "react";
 
 import { db } from "@/db";
-import { category, expense } from "@/db/schema";
+import { category, expense, recurringExpense } from "@/db/schema";
 import {
   TZ_COOKIE,
   addDays,
@@ -18,6 +19,7 @@ import {
   todayISO,
 } from "@/lib/dates";
 import { requireUser } from "@/lib/dal";
+import { materializeRecurring } from "@/lib/recurring";
 
 /* -------------------------------------------------------------------------- */
 /*  Every exported query resolves the user itself (DAL pattern) so a caller   */
@@ -31,6 +33,15 @@ export async function getUserToday(): Promise<string> {
   const tz = (await cookies()).get(TZ_COOKIE)?.value;
   return todayISO(tz ? decodeURIComponent(tz) : "UTC");
 }
+
+/**
+ * Create any recurring expenses that fell due (rent on the 1st, weekly
+ * subscriptions…) before a page reads expense data, so totals are right
+ * even if the daily cron hasn't run yet. Once per request.
+ */
+const ensureRecurring = cache(async (userId: string) => {
+  await materializeRecurring(userId, await getUserToday());
+});
 
 export async function getCategories() {
   const user = await requireUser();
@@ -56,6 +67,7 @@ export async function getCategoriesWithUsage() {
       name: category.name,
       icon: category.icon,
       color: category.color,
+      budget: category.budget,
       expenseCount: count(expense.id),
     })
     .from(category)
@@ -75,6 +87,7 @@ const expenseSelect = {
   categoryName: category.name,
   categoryIcon: category.icon,
   categoryColor: category.color,
+  recurringId: expense.recurringId,
 };
 
 export type ExpenseRow = {
@@ -87,6 +100,7 @@ export type ExpenseRow = {
   categoryName: string | null;
   categoryIcon: string | null;
   categoryColor: string | null;
+  recurringId: string | null;
 };
 
 async function sumBetween(userId: string, start: string, end: string) {
@@ -104,6 +118,7 @@ async function totalsByCategory(userId: string, start: string, end: string) {
       name: category.name,
       icon: category.icon,
       color: category.color,
+      budget: category.budget,
       total: sum(expense.amount).mapWith(Number),
       count: count(expense.id),
     })
@@ -118,6 +133,8 @@ async function totalsByCategory(userId: string, start: string, end: string) {
     name: r.name ?? "غير مصنّف",
     icon: r.icon ?? "❔",
     color: r.color ?? "#94a3b8",
+    /** Monthly category budget (minor units), if set. */
+    budget: r.budget ?? null,
     total: r.total ?? 0,
     count: r.count,
   }));
@@ -131,6 +148,7 @@ export type CategoryTotal = Awaited<ReturnType<typeof totalsByCategory>>[number]
 
 export async function getDashboardData(today: string) {
   const user = await requireUser();
+  await ensureRecurring(user.id);
   const month = monthOf(today);
   const { start, end } = monthRange(month);
 
@@ -180,6 +198,7 @@ export async function getExpenses(filters: {
   categoryId?: string;
 }) {
   const user = await requireUser();
+  await ensureRecurring(user.id);
   const { start, end } = monthRange(filters.month);
 
   const conditions = [
@@ -230,6 +249,7 @@ export async function getExpenses(filters: {
 
 export async function getMonthlyReport(month: string, today: string) {
   const user = await requireUser();
+  await ensureRecurring(user.id);
   const { start, end } = monthRange(month);
   const prev = monthRange(shiftMonth(month, -1));
   const trendMonths = lastMonths(month, 6);
@@ -326,3 +346,31 @@ export async function getMonthlyReport(month: string, today: string) {
 }
 
 export type MonthlyReport = Awaited<ReturnType<typeof getMonthlyReport>>;
+
+/* -------------------------------------------------------------------------- */
+/*                             Recurring expenses                             */
+/* -------------------------------------------------------------------------- */
+
+export async function getRecurring() {
+  const user = await requireUser();
+  return db
+    .select({
+      id: recurringExpense.id,
+      amount: recurringExpense.amount,
+      note: recurringExpense.note,
+      paymentMethod: recurringExpense.paymentMethod,
+      frequency: recurringExpense.frequency,
+      nextDate: recurringExpense.nextDate,
+      active: recurringExpense.active,
+      categoryId: recurringExpense.categoryId,
+      categoryName: category.name,
+      categoryIcon: category.icon,
+      categoryColor: category.color,
+    })
+    .from(recurringExpense)
+    .leftJoin(category, eq(recurringExpense.categoryId, category.id))
+    .where(eq(recurringExpense.userId, user.id))
+    .orderBy(desc(recurringExpense.active), asc(recurringExpense.nextDate));
+}
+
+export type RecurringRow = Awaited<ReturnType<typeof getRecurring>>[number];

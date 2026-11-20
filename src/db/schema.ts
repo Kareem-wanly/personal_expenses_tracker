@@ -42,6 +42,7 @@ export const user = sqliteTable("user", {
   notifyMonthlySummary: integer("notify_monthly_summary", { mode: "boolean" })
     .notNull()
     .default(true),
+  notifyRecurring: integer("notify_recurring", { mode: "boolean" }).notNull().default(true),
   ...timestamps,
 });
 
@@ -115,6 +116,8 @@ export const category = sqliteTable(
     icon: text("icon").notNull().default("📦"),
     color: text("color").notNull().default("#64748b"),
     sortOrder: integer("sort_order").notNull().default(0),
+    /** Optional monthly budget for this category, in minor units. */
+    budget: integer("budget"),
     ...timestamps,
   },
   (t) => [uniqueIndex("category_user_name_uq").on(t.userId, t.name)],
@@ -122,6 +125,43 @@ export const category = sqliteTable(
 
 export const PAYMENT_METHODS = ["cash", "card", "transfer"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export const FREQUENCIES = ["weekly", "monthly", "yearly"] as const;
+export type Frequency = (typeof FREQUENCIES)[number];
+
+/**
+ * A rule that creates an expense on a schedule (rent, subscriptions, bills).
+ * `startDate` anchors the day (e.g. the 31st → last day of shorter months);
+ * `nextDate` is the next occurrence still to be created.
+ */
+export const recurringExpense = sqliteTable(
+  "recurring_expense",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    categoryId: text("category_id").references(() => category.id, {
+      onDelete: "set null",
+    }),
+    amount: integer("amount").notNull(),
+    note: text("note"),
+    paymentMethod: text("payment_method", { enum: PAYMENT_METHODS })
+      .notNull()
+      .default("cash"),
+    frequency: text("frequency", { enum: FREQUENCIES }).notNull(),
+    startDate: text("start_date").notNull(),
+    nextDate: text("next_date").notNull(),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [
+    index("recurring_user_idx").on(t.userId),
+    index("recurring_due_idx").on(t.active, t.nextDate),
+  ],
+);
 
 export const expense = sqliteTable(
   "expense",
@@ -143,11 +183,17 @@ export const expense = sqliteTable(
     paymentMethod: text("payment_method", { enum: PAYMENT_METHODS })
       .notNull()
       .default("cash"),
+    /** Set when the expense was created by a recurring rule. */
+    recurringId: text("recurring_id").references(() => recurringExpense.id, {
+      onDelete: "set null",
+    }),
     ...timestamps,
   },
   (t) => [
     index("expense_user_date_idx").on(t.userId, t.date),
     index("expense_user_category_idx").on(t.userId, t.categoryId),
+    // One occurrence per rule per day, even if two requests race.
+    uniqueIndex("expense_recurring_date_uq").on(t.recurringId, t.date),
   ],
 );
 
