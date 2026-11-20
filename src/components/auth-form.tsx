@@ -1,13 +1,12 @@
 "use client";
 
 import { Loader2Icon } from "lucide-react";
+import { AnimatePresence, motion, useAnimate } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Reveal } from "@/components/motion/reveal";
 import { signIn, signUp } from "@/lib/auth-client";
 
 type Mode = "login" | "register";
@@ -25,12 +24,33 @@ function safeNext(next: string | null) {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
 }
 
+const input =
+  "h-12 min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground/70";
+
+/** One labelled row of the grouped field card. */
+function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 ps-4">
+      <div className="list-row-body flex min-w-0 flex-1 items-center gap-3 pe-4">
+        <label htmlFor={htmlFor} className="w-24 shrink-0 text-[16px]">
+          {label}
+        </label>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [scope, animate] = useAnimate<HTMLDivElement>();
   const isLogin = mode === "login";
+  // Next keeps the previous auth screen mounted (hidden), so ids must be unique.
+  const uid = useId();
+  const ids = { name: `${uid}-name`, email: `${uid}-email`, password: `${uid}-password` };
 
   function onSubmit(formData: FormData) {
     setError(null);
@@ -44,86 +64,104 @@ export function AuthForm({ mode }: { mode: Mode }) {
         : await signUp.email({ email, password, name });
 
       if (error) {
-        setError(
-          (error.code && ERRORS[error.code]) ||
-            error.message ||
-            "حدث خطأ، حاول مجدداً",
+        startTransition(() =>
+          setError((error.code && ERRORS[error.code]) || error.message || "حدث خطأ، حاول مجدداً"),
         );
+        if (scope.current) {
+          animate(scope.current, { x: [0, -12, 10, -6, 4, 0] }, { duration: 0.42 });
+        }
         return;
       }
+      navigator.vibrate?.(10);
       router.replace(safeNext(searchParams.get("next")));
       router.refresh();
     });
   }
 
   return (
-    <form action={onSubmit} className="space-y-4" noValidate={false}>
-      {!isLogin && (
-        <div className="space-y-2">
-          <Label htmlFor="name">الاسم</Label>
-          <Input
-            id="name"
-            name="name"
-            required
-            maxLength={50}
-            autoComplete="name"
-            className="h-11"
-            placeholder="مثال: أحمد"
-          />
+    <form action={onSubmit} className="space-y-4">
+      <Reveal index={1}>
+        <h2 className="mb-3 px-4 text-[13px] font-medium text-muted-foreground">
+          {isLogin ? "أهلاً بعودتك 👋 سجّل دخولك للمتابعة" : "أنشئ حسابك المجاني في ثوانٍ"}
+        </h2>
+        <div ref={scope} className="surface inset-list overflow-hidden">
+          {!isLogin && (
+            <Field label="الاسم" htmlFor={ids.name}>
+              <input
+                id={ids.name}
+                name="name"
+                required
+                maxLength={50}
+                autoComplete="name"
+                placeholder="مثال: أحمد"
+                className={input}
+              />
+            </Field>
+          )}
+          <Field label="البريد" htmlFor={ids.email}>
+            <input
+              id={ids.email}
+              name="email"
+              type="email"
+              dir="ltr"
+              required
+              autoComplete="email"
+              inputMode="email"
+              placeholder="you@example.com"
+              className={`${input} text-left`}
+            />
+          </Field>
+          <Field label="كلمة المرور" htmlFor={ids.password}>
+            <input
+              id={ids.password}
+              name="password"
+              type="password"
+              dir="ltr"
+              required
+              minLength={8}
+              autoComplete={isLogin ? "current-password" : "new-password"}
+              placeholder={isLogin ? "••••••••" : "8 أحرف على الأقل"}
+              className={`${input} text-left`}
+            />
+          </Field>
         </div>
-      )}
-      <div className="space-y-2">
-        <Label htmlFor="email">البريد الإلكتروني</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          dir="ltr"
-          required
-          autoComplete="email"
-          inputMode="email"
-          className="h-11 text-start"
-          placeholder="you@example.com"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">كلمة المرور</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          dir="ltr"
-          required
-          minLength={8}
-          autoComplete={isLogin ? "current-password" : "new-password"}
-          className="h-11 text-start"
-          placeholder="••••••••"
-        />
-        {!isLogin && (
-          <p className="text-xs text-muted-foreground">8 أحرف على الأقل</p>
-        )}
-      </div>
+        <AnimatePresence>
+          {error && (
+            <motion.p
+              role="alert"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mt-2 px-4 text-[13px] font-medium text-destructive"
+            >
+              {error}
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </Reveal>
 
-      {error && (
-        <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </p>
-      )}
-
-      <Button type="submit" className="h-11 w-full text-base" disabled={pending}>
-        {pending && <Loader2Icon className="animate-spin" />}
-        {isLogin ? "تسجيل الدخول" : "إنشاء حساب"}
-      </Button>
-
-      <p className="text-center text-sm text-muted-foreground">
-        {isLogin ? "ليس لديك حساب؟ " : "لديك حساب؟ "}
-        <Link
-          href={isLogin ? "/register" : "/login"}
-          className="font-medium text-primary underline-offset-4 hover:underline"
+      <Reveal index={2} className="space-y-4 pt-2">
+        <motion.button
+          type="submit"
+          disabled={pending}
+          whileTap={{ scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 520, damping: 30 }}
+          className="tint-button flex h-[52px] w-full items-center justify-center gap-2 rounded-full text-[17px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
         >
-          {isLogin ? "أنشئ حساباً مجانياً" : "سجّل الدخول"}
-        </Link>
-      </p>
+          {pending && <Loader2Icon className="size-5 animate-spin" />}
+          {isLogin ? "تسجيل الدخول" : "إنشاء حساب"}
+        </motion.button>
+
+        <p className="text-center text-[15px] text-muted-foreground">
+          {isLogin ? "ليس لديك حساب؟ " : "لديك حساب؟ "}
+          <Link
+            href={isLogin ? "/register" : "/login"}
+            className="font-semibold text-primary active:opacity-60"
+          >
+            {isLogin ? "أنشئ حساباً مجانياً" : "سجّل الدخول"}
+          </Link>
+        </p>
+      </Reveal>
     </form>
   );
 }

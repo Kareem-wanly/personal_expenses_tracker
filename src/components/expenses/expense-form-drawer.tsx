@@ -267,7 +267,7 @@ function ExpenseForm({
               >
                 <div className="flex items-center gap-3 ps-4">
                   <span className="size-7 shrink-0" />
-                  <div className="list-row-body flex flex-1 items-center justify-between gap-3 py-2 pe-4">
+                  <div className="list-row-body flex min-w-0 flex-1 items-center justify-between gap-3 py-2 pe-4">
                     <label htmlFor="date-picker" className="text-[16px]">
                       اختر اليوم
                     </label>
@@ -355,7 +355,7 @@ function Row({
       >
         <Icon className="size-4" strokeWidth={2.3} />
       </span>
-      <div className="list-row-body flex min-h-12 flex-1 items-center justify-between gap-3 py-1.5 pe-4">
+      <div className="list-row-body flex min-h-12 min-w-0 flex-1 items-center justify-between gap-3 py-1.5 pe-4">
         {label && <span className="text-[16px]">{label}</span>}
         {children}
       </div>

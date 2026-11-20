@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/constants";
 import { promptInstall, useInstallPrompt } from "@/lib/install-prompt";
 import { cn } from "@/lib/utils";
@@ -73,19 +72,19 @@ export function InstallBanner() {
       className={cn(
         "fixed inset-x-3 z-50 mx-auto max-w-md animate-in fade-in slide-in-from-bottom-6 duration-300",
         hasNav
-          ? "bottom-[calc(5.5rem+env(safe-area-inset-bottom))]"
+          ? "bottom-[calc(6rem+max(env(safe-area-inset-bottom),14px))]"
           : "bottom-[calc(1rem+env(safe-area-inset-bottom))]",
       )}
     >
-      <div className="rounded-2xl border bg-popover p-4 text-popover-foreground shadow-2xl">
+      <div className="glass rounded-[22px] p-4 text-popover-foreground">
         <div className="flex items-start gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/icon-192.png" alt="" className="size-12 rounded-xl shadow" />
+          <img src="/icons/icon-192.png" alt="" className="size-12 rounded-[13px] shadow" />
           <div className="min-w-0 flex-1">
-            <p id="install-title" className="font-semibold">
+            <p id="install-title" className="text-[16px] font-semibold">
               ثبّت {APP_NAME} على جوالك
             </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
               يفتح بلمسة من الشاشة الرئيسية بشاشة كاملة، ويصلك منه تنبيهات الميزانية.
             </p>
           </div>
@@ -93,7 +92,7 @@ export function InstallBanner() {
             type="button"
             onClick={dismiss}
             aria-label="إغلاق"
-            className="-m-1 rounded-full p-1 text-muted-foreground hover:bg-muted"
+            className="-m-1 flex size-7 items-center justify-center rounded-full bg-foreground/[0.07] text-muted-foreground"
           >
             <XIcon className="size-4" />
           </button>
@@ -101,18 +100,26 @@ export function InstallBanner() {
 
         {canPrompt ? (
           <div className="mt-3 flex gap-2">
-            <Button className="h-10 flex-1" onClick={install}>
-              <DownloadIcon />
+            <button
+              type="button"
+              onClick={install}
+              className="tint-button flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full text-[15px] font-semibold active:scale-[0.97]"
+            >
+              <DownloadIcon className="size-[18px]" />
               تثبيت التطبيق
-            </Button>
-            <Button variant="ghost" className="h-10" onClick={dismiss}>
+            </button>
+            <button
+              type="button"
+              onClick={dismiss}
+              className="h-11 rounded-full px-4 text-[15px] font-medium text-primary active:opacity-60"
+            >
               لاحقاً
-            </Button>
+            </button>
           </div>
         ) : (
-          <ol className="mt-3 space-y-2 rounded-xl bg-muted p-3 text-sm">
+          <ol className="mt-3 space-y-2 rounded-[14px] bg-foreground/[0.05] p-3 text-[14px] dark:bg-white/[0.08]">
             <li className="flex items-center gap-2">
-              <span className="flex size-5 items-center justify-center rounded-full bg-background text-xs font-semibold">
+              <span className="flex size-5 items-center justify-center rounded-full bg-card text-xs font-semibold">
                 1
               </span>
               اضغط زر المشاركة
@@ -120,7 +127,7 @@ export function InstallBanner() {
               في Safari
             </li>
             <li className="flex items-center gap-2">
-              <span className="flex size-5 items-center justify-center rounded-full bg-background text-xs font-semibold">
+              <span className="flex size-5 items-center justify-center rounded-full bg-card text-xs font-semibold">
                 2
               </span>
               اختر «إضافة إلى الشاشة الرئيسية»

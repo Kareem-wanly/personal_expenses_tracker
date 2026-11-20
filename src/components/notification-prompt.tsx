@@ -4,7 +4,6 @@ import { BellRingIcon, Loader2Icon, XIcon } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { useInstallPrompt } from "@/lib/install-prompt";
 import { VAPID_PUBLIC_KEY, enablePush, usePushState, useSnooze } from "@/lib/push-client";
 
@@ -53,26 +52,26 @@ export function NotificationPrompt({ hasExpenses }: { hasExpenses: boolean }) {
   return (
     <section
       aria-labelledby="notify-prompt-title"
-      className="relative overflow-hidden rounded-2xl border border-primary/30 bg-primary/5 p-4 animate-in fade-in slide-in-from-top-2 duration-300"
+      className="surface relative overflow-hidden p-4 animate-in fade-in slide-in-from-top-2 duration-300"
     >
       <button
         type="button"
         onClick={snooze}
         aria-label="إغلاق"
-        className="absolute end-2 top-2 rounded-full p-1 text-muted-foreground hover:bg-muted"
+        className="absolute end-3 top-3 flex size-7 items-center justify-center rounded-full bg-foreground/[0.07] text-muted-foreground"
       >
         <XIcon className="size-4" />
       </button>
 
       <div className="flex gap-3 pe-6">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-[11px] bg-[#ff3b30] text-white">
           <BellRingIcon className="size-5" />
         </span>
         <div className="min-w-0">
-          <h2 id="notify-prompt-title" className="font-semibold">
+          <h2 id="notify-prompt-title" className="text-[16px] font-semibold">
             خلّيك على اطلاع بميزانيتك
           </h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+          <p className="mt-0.5 text-[14px] text-muted-foreground">
             ننبّهك عند الوصول إلى 80% من ميزانيتك، ونذكّرك مساءً إذا نسيت تسجيل
             مصاريفك. بدون إزعاج.
           </p>
@@ -80,13 +79,23 @@ export function NotificationPrompt({ hasExpenses }: { hasExpenses: boolean }) {
       </div>
 
       <div className="mt-3 flex gap-2">
-        <Button className="h-10 flex-1" onClick={enable} disabled={pending}>
-          {pending ? <Loader2Icon className="animate-spin" /> : <BellRingIcon />}
+        <button
+          type="button"
+          onClick={enable}
+          disabled={pending}
+          className="tint-button flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full text-[15px] font-semibold active:scale-[0.97] disabled:opacity-70"
+        >
+          {pending ? <Loader2Icon className="size-[18px] animate-spin" /> : <BellRingIcon className="size-[18px]" />}
           فعّل التنبيهات
-        </Button>
-        <Button variant="ghost" className="h-10" onClick={snooze} disabled={pending}>
+        </button>
+        <button
+          type="button"
+          onClick={snooze}
+          disabled={pending}
+          className="h-11 rounded-full px-4 text-[15px] font-medium text-primary active:opacity-60"
+        >
           لاحقاً
-        </Button>
+        </button>
       </div>
     </section>
   );

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import { Suspense, ViewTransition } from "react";
 
 import { AuthForm } from "@/components/auth-form";
 
@@ -7,11 +7,14 @@ export const metadata: Metadata = { title: "إنشاء حساب" };
 
 export default function RegisterPage() {
   return (
-    <>
-      <h2 className="mb-6 text-lg font-semibold">ابدأ بتتبّع مصاريفك ✨</h2>
-      <Suspense>
-        <AuthForm mode="register" />
-      </Suspense>
-    </>
+    // Login ↔ register crossfade with a soft rise (see .reveal-* in globals.css).
+    <ViewTransition enter="reveal-in" exit="reveal-out" default="none">
+      <div>
+        {/* useSearchParams needs a Suspense boundary for static prerendering. */}
+        <Suspense>
+          <AuthForm mode="register" />
+        </Suspense>
+      </div>
+    </ViewTransition>
   );
 }
