@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, max } from "drizzle-orm";
+import { and, between, count, eq, max, sum } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -16,7 +16,7 @@ import {
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getCurrentUser, requireUser } from "@/lib/dal";
-import { TZ_COOKIE, monthOf, todayISO } from "@/lib/dates";
+import { DATE_RE, TZ_COOKIE, monthOf, todayISO } from "@/lib/dates";
 import { toMinor } from "@/lib/money";
 import { budgetAlert, monthTotal } from "@/lib/notifications";
 import { pushEnabled, sendPushToUser } from "@/lib/push";
@@ -286,4 +286,33 @@ export async function sendTestNotification(): Promise<ActionState> {
 export async function signOutAction() {
   await auth.api.signOut({ headers: await headers() });
   redirect("/login");
+}
+
+/* ------------------------------ Assistant ------------------------------- */
+
+const summarySchema = z.object({
+  from: z.string().regex(DATE_RE),
+  to: z.string().regex(DATE_RE),
+  categoryId: z.string().max(64).nullable(),
+});
+
+/** Answers "how much did I spend …" for the assistant. Read-only. */
+export async function getSpendingSummary(input: z.input<typeof summarySchema>) {
+  const user = await requireUser();
+  const parsed = summarySchema.safeParse(input);
+  if (!parsed.success || parsed.data.from > parsed.data.to) {
+    return { ok: false as const, message: "فترة غير صالحة" };
+  }
+  const { from, to, categoryId } = parsed.data;
+  const [row] = await db
+    .select({ total: sum(expense.amount).mapWith(Number), count: count(expense.id) })
+    .from(expense)
+    .where(
+      and(
+        eq(expense.userId, user.id),
+        between(expense.date, from, to),
+        categoryId ? eq(expense.categoryId, categoryId) : undefined,
+      ),
+    );
+  return { ok: true as const, total: row?.total ?? 0, count: row?.count ?? 0, currency: user.currency };
 }

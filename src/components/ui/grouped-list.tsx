@@ -1,4 +1,5 @@
 import { ChevronLeftIcon, type LucideIcon } from "lucide-react";
+import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
@@ -104,5 +105,18 @@ export function RowButton({
     <button type={type} onClick={onClick} disabled={disabled} className={cn(rowBase, pressable, className)}>
       <Body {...content} />
     </button>
+  );
+}
+
+/** Row that navigates (with a chevron, like iOS Settings). */
+export function RowLink({
+  href,
+  className,
+  ...content
+}: Omit<RowContent, "chevron"> & { href: string; className?: string }) {
+  return (
+    <Link href={href} className={cn(rowBase, pressable, className)}>
+      <Body {...content} chevron />
+    </Link>
   );
 }

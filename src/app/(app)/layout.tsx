@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { AssistantSheet } from "@/components/assistant/assistant-sheet";
 import { ExpenseContextMenu } from "@/components/expenses/expense-context-menu";
 import { ExpenseFormDrawer } from "@/components/expenses/expense-form-drawer";
 import { NavBar } from "@/components/layout/nav-bar";
@@ -34,5 +35,10 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
 
 async function ExpenseFormLoader() {
   const [user, categories] = await Promise.all([requireUser(), getCategories()]);
-  return <ExpenseFormDrawer categories={categories} currency={user.currency} />;
+  return (
+    <>
+      <ExpenseFormDrawer categories={categories} currency={user.currency} />
+      <AssistantSheet categories={categories} currency={user.currency} />
+    </>
+  );
 }
