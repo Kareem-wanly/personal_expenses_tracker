@@ -26,6 +26,7 @@ import { SpendingBreakdown } from "@/components/spending-breakdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatShortDate, monthOf, normalizeMonth } from "@/lib/dates";
 import { formatMoney, formatNumber, formatPercent } from "@/lib/money";
+import { statValueSize } from "@/lib/fit-text";
 import { cn } from "@/lib/utils";
 import { getMonthlyReport, getUserToday } from "@/server/queries";
 
@@ -243,7 +244,9 @@ function Metric({
         </span>
         <span className="truncate text-[13px] font-medium text-muted-foreground">{label}</span>
       </div>
-      <p className="mt-2.5 truncate text-[20px] font-bold leading-tight tabular" dir="ltr">
+      {/* No dir="ltr": amounts are already bidi-isolated by formatMoney, and
+          forcing LTR reversed mixed values ("19 يوم" showed as "يوم 19"). */}
+      <p className={cn("mt-2.5 truncate font-bold leading-tight tabular", statValueSize(value))}>
         {value}
       </p>
     </div>

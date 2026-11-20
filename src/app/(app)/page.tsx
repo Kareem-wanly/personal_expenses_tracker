@@ -21,8 +21,10 @@ import { NotificationPrompt } from "@/components/notification-prompt";
 import { SpendingBreakdown } from "@/components/spending-breakdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDayLabel, formatMonthLabel, parseISODate } from "@/lib/dates";
+import { statValueSize } from "@/lib/fit-text";
 import { formatMoney } from "@/lib/money";
 import { TAB_FORWARD } from "@/lib/tabs";
+import { cn } from "@/lib/utils";
 import { getDashboardData, getUserToday } from "@/server/queries";
 
 export default function HomePage() {
@@ -247,7 +249,9 @@ function Stat({
         </span>
         <span className="text-[13px] font-medium text-muted-foreground">{label}</span>
       </div>
-      <p className="mt-2.5 truncate text-[21px] font-bold leading-tight tabular" dir="ltr">
+      {/* No dir="ltr": amounts are already bidi-isolated by formatMoney, and
+          forcing LTR would reverse mixed Arabic values like "19 يوم". */}
+      <p className={cn("mt-2.5 truncate font-bold leading-tight tabular", statValueSize(value))}>
         {value}
       </p>
     </div>
