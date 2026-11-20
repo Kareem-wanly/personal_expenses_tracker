@@ -1,4 +1,4 @@
-import { LogOutIcon, MicIcon } from "lucide-react";
+import { LogOutIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -10,7 +10,7 @@ import { InstallApp } from "@/components/settings/install-app";
 import { NotificationSettings } from "@/components/settings/notification-settings";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { ThemeSwitcher } from "@/components/settings/theme-switcher";
-import { Group, RowButton, RowIcon, RowLink } from "@/components/ui/grouped-list";
+import { Group, RowButton } from "@/components/ui/grouped-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { APP_NAME } from "@/lib/constants";
 import { requireUser } from "@/lib/dal";
@@ -39,17 +39,6 @@ export default function SettingsPage() {
             <Notifications />
           </Reveal>
         </Suspense>
-
-        <Reveal index={3}>
-          <Group header="المساعد" footer="اضغط مطوّلاً على زر «+» لتتكلّم مع المساعد مباشرة.">
-            <RowLink
-              href="/voice-lab"
-              leading={<RowIcon icon={MicIcon} tint="#ff2d55" />}
-              title="المساعد الصوتي"
-              subtitle="جرّب Whisper على جهازك واختر المحرّك"
-            />
-          </Group>
-        </Reveal>
 
         <Reveal index={3}>
           <ThemeSwitcher />

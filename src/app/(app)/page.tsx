@@ -9,7 +9,6 @@ import {
 import Link from "next/link";
 import { Suspense, ViewTransition } from "react";
 
-import { AssistantButton } from "@/components/assistant/assistant-button";
 import { EmptyState } from "@/components/empty-state";
 import { AddExpenseButton } from "@/components/expenses/add-expense-button";
 import { ExpenseItem } from "@/components/expenses/expense-item";
@@ -63,17 +62,14 @@ async function Dashboard() {
         eyebrow={dateFmt.format(parseISODate(today))}
         title={`أهلاً، ${firstName}`}
         action={
-          <div className="flex items-center gap-2">
-            <AssistantButton />
-            <Link
-              href="/settings"
-              transitionTypes={[TAB_FORWARD]}
-              aria-label="الإعدادات"
-              className="pressable flex size-10 items-center justify-center rounded-full bg-gradient-to-b from-[#a1a1a6] to-[#6e6e73] text-[15px] font-semibold text-white shadow-sm"
-            >
-              {firstName.slice(0, 1)}
-            </Link>
-          </div>
+          <Link
+            href="/settings"
+            transitionTypes={[TAB_FORWARD]}
+            aria-label="الإعدادات"
+            className="pressable flex size-10 items-center justify-center rounded-full bg-gradient-to-b from-[#a1a1a6] to-[#6e6e73] text-[15px] font-semibold text-white shadow-sm"
+          >
+            {firstName.slice(0, 1)}
+          </Link>
         }
       />
 

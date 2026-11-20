@@ -29,15 +29,6 @@ const serwist = new Serwist({
   },
 });
 
-// Leave Web Worker scripts to the network. Turbopack passes each worker its
-// bootstrap config in the URL fragment (#params=…), and a response served
-// by a service worker never carries a fragment (Response.url drops it), so
-// the worker would start without its config. Registered before Serwist so
-// it runs first and Serwist never calls respondWith for these requests.
-self.addEventListener("fetch", (event) => {
-  if (event.request.destination === "worker") event.stopImmediatePropagation();
-});
-
 serwist.addEventListeners();
 
 /* ------------------------------ Web Push ------------------------------- */

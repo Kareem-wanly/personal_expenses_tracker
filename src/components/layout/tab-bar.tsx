@@ -3,9 +3,7 @@
 import { PlusIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
-import { useRef } from "react";
 
-import { openAssistant } from "@/components/assistant/assistant-store";
 import { openExpenseForm } from "@/components/expenses/expense-form-store";
 import { TAB_ICONS } from "@/components/layout/tab-icons";
 import { TABS, tabTransition } from "@/lib/tabs";
@@ -21,13 +19,6 @@ const PILL_SPRING = { type: "spring", stiffness: 480, damping: 38 } as const;
  */
 export function TabBar() {
   const { current, active, markPending } = useTabNav();
-  // Tap "+" to add by hand; press and hold to talk to the assistant.
-  const hold = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const held = useRef(false);
-  const cancelHold = () => {
-    if (hold.current) clearTimeout(hold.current);
-    hold.current = null;
-  };
 
   return (
     <div
@@ -72,30 +63,11 @@ export function TabBar() {
 
         <motion.button
           type="button"
-          onClick={() => {
-            if (held.current) {
-              held.current = false;
-              return;
-            }
-            openExpenseForm();
-          }}
-          onPointerDown={() => {
-            held.current = false;
-            cancelHold();
-            hold.current = setTimeout(() => {
-              held.current = true;
-              navigator.vibrate?.(15);
-              openAssistant({ listen: true });
-            }, 450);
-          }}
-          onPointerUp={cancelHold}
-          onPointerLeave={cancelHold}
-          onPointerCancel={cancelHold}
-          onContextMenu={(e) => e.preventDefault()}
-          aria-label="إضافة مصروف (اضغط مطوّلاً للمساعد الصوتي)"
+          onClick={() => openExpenseForm()}
+          aria-label="إضافة مصروف"
           whileTap={{ scale: 0.88 }}
           transition={{ type: "spring", stiffness: 600, damping: 30 }}
-          className="tint-button pointer-events-auto flex size-16 shrink-0 select-none items-center justify-center rounded-full [-webkit-touch-callout:none]"
+          className="tint-button pointer-events-auto flex size-16 shrink-0 items-center justify-center rounded-full"
         >
           <PlusIcon className="size-7" strokeWidth={2.4} />
         </motion.button>
