@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 
+import { BRAND } from "@/lib/brand";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants";
 
 export default function manifest(): MetadataRoute.Manifest {
@@ -14,8 +15,9 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#f8faf9",
-    theme_color: "#059669",
+    // Android draws its launch screen from this colour + the icon + the name.
+    background_color: BRAND.solid,
+    theme_color: BRAND.solid,
     categories: ["finance", "productivity"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

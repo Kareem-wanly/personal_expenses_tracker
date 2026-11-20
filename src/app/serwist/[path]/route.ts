@@ -10,6 +10,9 @@ const revision =
 export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } =
   createSerwistRoute({
     additionalPrecacheEntries: [{ url: "/~offline", revision }],
+    // iOS fetches only the launch image for its own screen; don't make every
+    // install download all of them (~1 MB).
+    globIgnores: ["public/splash/**"],
     swSrc: "src/app/sw.ts",
     useNativeEsbuild: true,
   });
