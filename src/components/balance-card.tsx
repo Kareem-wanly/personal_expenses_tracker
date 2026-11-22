@@ -1,6 +1,9 @@
+import Link from "next/link";
+
 import { AddIncomeButton } from "@/components/expenses/add-income-button";
 import { LedgerRows } from "@/components/ledger";
 import { formatMoney, formatPercent } from "@/lib/money";
+import { TAB_FORWARD } from "@/lib/tabs";
 
 /**
  * Income vs spending for the month and the all-time balance, set as ledger
@@ -40,7 +43,16 @@ export function BalanceCard({
     <div className="surface px-4 py-4">
       <div className="flex items-center justify-between">
         <h2 className="text-[16px] font-semibold">الدخل والرصيد</h2>
-        <AddIncomeButton label="دخل" />
+        <div className="flex items-center gap-1">
+          <Link
+            href="/expenses?type=income"
+            transitionTypes={[TAB_FORWARD]}
+            className="inline-flex h-9 items-center px-2 text-[14px] font-medium text-primary active:opacity-60"
+          >
+            السجلّ
+          </Link>
+          <AddIncomeButton label="دخل" />
+        </div>
       </div>
 
       {income > 0 && (

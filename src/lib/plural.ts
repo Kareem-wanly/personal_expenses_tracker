@@ -29,3 +29,11 @@ export function countExpenses(n: number): string {
   if (n % 100 >= 3 && n % 100 <= 10) return `${formatNumber(n)} مصاريف`;
   return `${formatNumber(n)} مصروفاً`;
 }
+
+/** 1 → دفعة واحدة · 2 → دفعتان · 3–10 → ٣ دفعات · 11+ → ١١ دفعة */
+export function countPayments(n: number): string {
+  if (n === 1) return "دفعة واحدة";
+  if (n === 2) return "دفعتان";
+  if (n % 100 >= 3 && n % 100 <= 10) return `${formatNumber(n)} دفعات`;
+  return `${formatNumber(n)} دفعة`;
+}

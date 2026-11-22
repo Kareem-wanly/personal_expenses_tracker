@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { it } from "node:test";
 
-import { countExpenses, countTimes, timesBigger } from "./plural";
+import { countExpenses, countPayments, countTimes, timesBigger } from "./plural";
 
 it("times and multiples", () => {
   assert.equal(countTimes(2), "مرتين");
@@ -19,4 +19,11 @@ it("Arabic count agreement", () => {
   assert.equal(countExpenses(10), "10 مصاريف");
   assert.equal(countExpenses(11), "11 مصروفاً");
   assert.equal(countExpenses(103), "103 مصاريف");
+});
+
+it("countPayments agrees with the number", () => {
+  assert.equal(countPayments(1), "دفعة واحدة");
+  assert.equal(countPayments(2), "دفعتان");
+  assert.equal(countPayments(4), "4 دفعات");
+  assert.equal(countPayments(12), "12 دفعة");
 });

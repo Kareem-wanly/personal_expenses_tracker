@@ -36,7 +36,7 @@ export function IncomeItem({ item, currency, meta }: { item: IncomeRow; currency
               .join(" · ")}
           </p>
         </div>
-        <span className="shrink-0 text-[16px] font-semibold text-positive tabular">
+        <span className="shrink-0 text-[16px] font-semibold text-positive tabular" dir="ltr">
           +{formatMoney(item.amount, currency)}
         </span>
       </div>
