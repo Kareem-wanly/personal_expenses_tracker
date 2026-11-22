@@ -78,7 +78,7 @@ async function ExpensesContent({
             <AnimatedMoney
               value={data.total}
               currency={data.currency}
-              className="block text-[34px] font-bold leading-tight tracking-tight tabular"
+              className="block font-display text-[34px] font-semibold leading-tight tabular"
             />
             <p className="mt-1 text-[14px] text-muted-foreground">
               {formatNumber(data.count)} عملية

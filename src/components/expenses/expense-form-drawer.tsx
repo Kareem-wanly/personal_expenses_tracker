@@ -7,7 +7,7 @@ import {
   Loader2Icon,
   PencilLineIcon,
   RepeatIcon,
-  SparklesIcon,
+  TypeIcon,
   Trash2Icon,
 } from "lucide-react";
 import { AnimatePresence, motion, useAnimate } from "motion/react";
@@ -72,7 +72,7 @@ export function ExpenseFormDrawer({ categories, currency }: Props) {
     >
       <DrawerContent
         // Dark sheets sit on an elevated grey, with cards one step lighter.
-        className="mx-auto max-w-2xl border-t-0 bg-background data-[swipe-direction=down]:rounded-t-[28px] dark:bg-[#1c1c1e] dark:[--card:#2c2c2e]"
+        className="mx-auto max-w-2xl border-t-0 bg-background data-[swipe-direction=down]:rounded-t-[22px]"
         // New entry: jump straight to the amount so the keypad opens.
         initialFocus={
           isNew
@@ -216,7 +216,7 @@ function ExpenseForm({
         {!expense && (
           <div className="space-y-2 pt-1">
             <label className="surface flex h-11 items-center gap-2 px-3 has-focus-visible:ring-2 has-focus-visible:ring-ring">
-              <SparklesIcon className="size-[18px] shrink-0 text-primary" />
+              <TypeIcon className="size-[18px] shrink-0 text-muted-foreground" strokeWidth={1.75} />
               <span className="sr-only">إدخال سريع</span>
               <input
                 value={quick}
@@ -259,7 +259,7 @@ function ExpenseForm({
                       type="button"
                       onClick={addBatch}
                       disabled={batchPending}
-                      className="tint-button flex h-10 w-full items-center justify-center gap-2 rounded-full text-[15px] font-semibold disabled:opacity-70"
+                      className="tint-button flex h-10 w-full items-center justify-center gap-2 text-[15px] font-semibold disabled:opacity-70"
                     >
                       {batchPending ? (
                         <Loader2Icon className="size-4 animate-spin" />
@@ -292,9 +292,9 @@ function ExpenseForm({
             onChange={(e) => setAmount(e.target.value)}
             aria-invalid={!!errors.amount}
             style={{ fontSize: amountSize }}
-            className="h-[72px] w-full bg-transparent text-center font-bold leading-none tracking-tight caret-primary tabular outline-none transition-[font-size] duration-200 placeholder:text-foreground/20"
+            className="h-[72px] w-full bg-transparent text-center font-display font-semibold leading-none caret-primary tabular outline-none transition-[font-size] duration-200 placeholder:text-foreground/20"
           />
-          <span className="mt-1 rounded-full bg-foreground/[0.06] px-3 py-1 text-[13px] font-semibold text-muted-foreground dark:bg-white/10">
+          <span className="mt-1 text-[13px] font-semibold tracking-wide text-muted-foreground">
             {currency}
           </span>
           <AnimatePresence>
@@ -331,14 +331,14 @@ function ExpenseForm({
                     className="peer sr-only"
                   />
                   <motion.span
-                    animate={{ scale: selected ? 1.06 : 1 }}
-                    whileTap={{ scale: 0.88 }}
+                    whileTap={{ scale: 0.92 }}
                     transition={SPRING}
-                    className="relative flex size-14 items-center justify-center rounded-[16px] text-[26px] transition-[background-color,box-shadow] duration-200 group-has-focus-visible:ring-2 group-has-focus-visible:ring-ring"
-                    style={{
-                      backgroundColor: selected ? c.color : `${c.color}1f`,
-                      boxShadow: selected ? `0 10px 20px -8px ${c.color}` : "none",
-                    }}
+                    className={cn(
+                      "relative flex size-14 items-center justify-center rounded-[14px] text-[26px] transition-[box-shadow,background-color] duration-200 group-has-focus-visible:ring-2 group-has-focus-visible:ring-ring",
+                      selected
+                        ? "bg-card shadow-[inset_0_0_0_2px_var(--ink)]"
+                        : "bg-foreground/[0.045] shadow-[inset_0_0_0_1px_var(--hairline)]",
+                    )}
                   >
                     <span aria-hidden>{c.icon}</span>
                     <AnimatePresence>
@@ -348,7 +348,7 @@ function ExpenseForm({
                           animate={{ scale: 1 }}
                           exit={{ scale: 0 }}
                           transition={SPRING}
-                          className="absolute -end-1 -top-1 flex size-5 items-center justify-center rounded-full bg-card text-primary shadow ring-2 ring-card"
+                          className="absolute -end-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-ink text-ink-foreground ring-2 ring-card"
                         >
                           <CheckIcon className="size-3" strokeWidth={3.5} />
                         </motion.span>
@@ -371,7 +371,7 @@ function ExpenseForm({
 
         {/* Details: inset-grouped rows */}
         <div className="surface inset-list overflow-hidden">
-          <SheetRow icon={CalendarDaysIcon} tint="#ff3b30" label="التاريخ">
+          <SheetRow icon={CalendarDaysIcon} label="التاريخ">
             <SegmentedControl
               label="التاريخ"
               value={dateMode}
@@ -413,7 +413,7 @@ function ExpenseForm({
               </motion.div>
             )}
           </AnimatePresence>
-          <SheetRow icon={CreditCardIcon} tint="#34c759" label="الدفع">
+          <SheetRow icon={CreditCardIcon} label="الدفع">
             <SegmentedControl
               name="paymentMethod"
               label="طريقة الدفع"
@@ -427,7 +427,7 @@ function ExpenseForm({
             />
           </SheetRow>
           {!expense && (
-            <SheetRow icon={RepeatIcon} tint="#5e5ce6" label="التكرار">
+            <SheetRow icon={RepeatIcon} label="التكرار">
               <SegmentedControl
                 label="التكرار"
                 value={repeat}
@@ -442,7 +442,7 @@ function ExpenseForm({
               />
             </SheetRow>
           )}
-          <SheetRow icon={PencilLineIcon} tint="#8e8e93">
+          <SheetRow icon={PencilLineIcon}>
             <label htmlFor="note" className="sr-only">
               ملاحظة
             </label>
@@ -479,7 +479,7 @@ function ExpenseForm({
           disabled={pending}
           whileTap={{ scale: 0.97 }}
           transition={SPRING}
-          className="tint-button flex h-[52px] w-full items-center justify-center gap-2 rounded-full text-[17px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
+          className="tint-button flex h-[52px] w-full items-center justify-center gap-2 text-[17px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
         >
           {pending ? (
             <Loader2Icon className="size-5 animate-spin" />

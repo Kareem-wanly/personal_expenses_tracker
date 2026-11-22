@@ -1,20 +1,29 @@
-import { SparklesIcon } from "lucide-react";
-
 import type { Insight, InsightTone } from "@/lib/insights";
 import { cn } from "@/lib/utils";
 
+/** A thin rule on the start edge says whether a note is good, a warning, … */
 const TONE: Record<InsightTone, string> = {
-  good: "bg-[#34c759]/12",
-  warn: "bg-[#ff9f0a]/14",
-  bad: "bg-[#ff3b30]/12",
-  info: "bg-[#0a84ff]/10",
+  good: "bg-positive",
+  warn: "bg-warning",
+  bad: "bg-negative",
+  info: "bg-muted-foreground/40",
 };
 
-/** Rule-based insights (see lib/insights): no AI, computed from your data. */
+const TONE_LABEL: Record<InsightTone, string> = {
+  good: "إيجابي",
+  warn: "تنبيه",
+  bad: "تحذير",
+  info: "ملاحظة",
+};
+
+/**
+ * Rule-based notes on the month (see lib/insights). Numbered and set as
+ * text — the content is the point, not decoration.
+ */
 export function InsightsList({
   insights,
   limit,
-  title = "رؤى ذكية",
+  title = "ملاحظات الشهر",
 }: {
   insights: Insight[];
   limit?: number;
@@ -25,26 +34,22 @@ export function InsightsList({
 
   return (
     <section className="space-y-2.5" aria-label={title}>
-      <h2 className="flex items-center gap-1.5 px-1 text-[20px] font-bold">
-        <SparklesIcon className="size-5 text-primary" />
-        {title}
-      </h2>
-      <ul className="space-y-2">
-        {shown.map((i) => (
-          <li key={i.id} className="surface flex gap-3 p-3.5">
-            <span
-              aria-hidden
-              className={cn("flex size-10 shrink-0 items-center justify-center rounded-[12px] text-[20px]", TONE[i.tone])}
-            >
-              {i.icon}
+      <h2 className="px-1 text-[18px] font-semibold">{title}</h2>
+      <ol className="surface divide-y divide-hairline overflow-hidden">
+        {shown.map((i, n) => (
+          <li key={i.id} className="relative flex gap-3 py-3.5 pe-4 ps-5">
+            <span aria-hidden className={cn("absolute inset-y-3.5 start-0 w-[3px] rounded-e-full", TONE[i.tone])} />
+            <span className="sr-only">{TONE_LABEL[i.tone]}: </span>
+            <span aria-hidden className="mt-0.5 w-5 shrink-0 font-display text-[13px] font-semibold text-muted-foreground tabular">
+              {String(n + 1).padStart(2, "0")}
             </span>
             <div className="min-w-0">
               <p className="text-[15px] font-semibold leading-snug">{i.title}</p>
-              <p className="mt-0.5 text-[13px] leading-relaxed text-muted-foreground">{i.body}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{i.body}</p>
             </div>
           </li>
         ))}
-      </ul>
+      </ol>
     </section>
   );
 }

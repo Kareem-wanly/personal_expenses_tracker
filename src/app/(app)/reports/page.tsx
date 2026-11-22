@@ -1,11 +1,6 @@
 import {
-  CalendarCheckIcon,
   ChevronLeftIcon,
   DownloadIcon,
-  FlameIcon,
-  GaugeIcon,
-  HashIcon,
-  type LucideIcon,
   TrendingDownIcon,
   TrendingUpIcon,
 } from "lucide-react";
@@ -18,6 +13,7 @@ import { AddIncomeButton } from "@/components/expenses/add-income-button";
 import { ExpenseItem } from "@/components/expenses/expense-item";
 import { IncomeItem } from "@/components/expenses/income-item";
 import { InsightsList } from "@/components/insights-list";
+import { LedgerMeter, LedgerRows } from "@/components/ledger";
 import { PageHeader } from "@/components/layout/page-header";
 import { TabScreen } from "@/components/layout/tab-screen";
 import { AnimatedMoney } from "@/components/motion/animated-money";
@@ -29,7 +25,6 @@ import { SpendingBreakdown } from "@/components/spending-breakdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatShortDate, monthOf, normalizeMonth } from "@/lib/dates";
 import { formatMoney, formatNumber, formatPercent } from "@/lib/money";
-import { statValueSize } from "@/lib/fit-text";
 import { cn } from "@/lib/utils";
 import { getInsights, getMonthlyReport, getUserToday } from "@/server/queries";
 
@@ -77,7 +72,7 @@ async function Report({
             <AnimatedMoney
               value={r.total}
               currency={currency}
-              className="block text-[38px] font-bold leading-tight tracking-tight tabular"
+              className="block font-display text-[38px] font-semibold leading-tight tabular"
             />
             {r.change !== null ? (
               <ChangeBadge change={r.change} prev={formatMoney(r.prevTotal, currency)} />
@@ -102,35 +97,24 @@ async function Report({
             />
           ) : (
             <>
-              <Reveal index={0} className="grid grid-cols-2 gap-3">
-                <Metric icon={HashIcon} tint="#0a84ff" label="عدد العمليات" value={formatNumber(r.count)} />
-                <Metric
-                  icon={GaugeIcon}
-                  tint="#bf5af2"
-                  label="المعدّل اليومي"
-                  value={formatMoney(r.dailyAverage, currency)}
-                />
-                <Metric
-                  icon={CalendarCheckIcon}
-                  tint="#30b0c7"
-                  label="أيام الصرف"
-                  value={`${formatNumber(r.spendingDays)} يوم`}
-                />
-                {r.projected !== null ? (
-                  <Metric
-                    icon={TrendingUpIcon}
-                    tint="#ff9f0a"
-                    label="المتوقّع للشهر"
-                    value={formatMoney(r.projected, currency)}
+              <Reveal index={0}>
+                <div className="surface px-4 py-4">
+                  <LedgerRows
+                    rows={[
+                      { label: "عدد العمليات", value: formatNumber(r.count) },
+                      { label: "المعدّل اليومي", value: formatMoney(r.dailyAverage, currency) },
+                      { label: "أيام الصرف", value: `${formatNumber(r.spendingDays)} يوم` },
+                      r.projected !== null
+                        ? { label: "المتوقّع للشهر", value: formatMoney(r.projected, currency) }
+                        : r.maxDay
+                          ? {
+                              label: `أعلى يوم · ${formatShortDate(r.maxDay.date)}`,
+                              value: formatMoney(r.maxDay.total, currency),
+                            }
+                          : { label: "أعلى يوم", value: "—", tone: "muted" as const },
+                    ]}
                   />
-                ) : r.maxDay ? (
-                  <Metric
-                    icon={FlameIcon}
-                    tint="#ff9f0a"
-                    label={`أعلى يوم · ${formatShortDate(r.maxDay.date)}`}
-                    value={formatMoney(r.maxDay.total, currency)}
-                  />
-                ) : null}
+                </div>
               </Reveal>
 
               <Suspense fallback={null}>
@@ -140,9 +124,6 @@ async function Report({
               <Section index={1} title="الدخل والادخار">
                 {r.incomes.length === 0 ? (
                   <div className="surface flex items-center gap-3 p-4">
-                    <span className="flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-[#34c759]/15 text-[22px]">
-                      💼
-                    </span>
                     <p className="min-w-0 flex-1 text-[14px] text-muted-foreground">
                       لا دخل مسجّل لهذا الشهر. أضفه لتعرف صافي الشهر ونسبة الادخار.
                     </p>
@@ -153,7 +134,7 @@ async function Report({
                     <div className="surface grid grid-cols-3 gap-2 p-3 text-center">
                       <div>
                         <p className="text-[12px] text-muted-foreground">الدخل</p>
-                        <p className="truncate text-[15px] font-bold text-[#248a3d] tabular dark:text-[#30d158]">
+                        <p className="truncate text-[15px] font-bold text-positive tabular">
                           {formatMoney(r.incomeTotal, currency)}
                         </p>
                       </div>
@@ -162,7 +143,7 @@ async function Report({
                         <p
                           className={cn(
                             "truncate text-[15px] font-bold tabular",
-                            r.net < 0 && "text-[#d70015] dark:text-[#ff6961]",
+                            r.net < 0 && "text-negative",
                           )}
                         >
                           {formatMoney(r.net, currency)}
@@ -234,8 +215,8 @@ async function Report({
                   download
                   className="surface flex items-center gap-3 py-1 ps-4 active:bg-foreground/[0.06]"
                 >
-                  <span className="flex size-7 items-center justify-center rounded-[8px] bg-[#34c759] text-white">
-                    <DownloadIcon className="size-4" strokeWidth={2.3} />
+                  <span className="flex size-6 items-center justify-center text-foreground/70">
+                    <DownloadIcon className="size-[19px]" strokeWidth={1.75} />
                   </span>
                   <span className="flex min-h-11 flex-1 items-center justify-between pe-3">
                     <span>
@@ -277,42 +258,11 @@ function Section({
   return (
     <Reveal as="section" index={index} className="space-y-2.5">
       <div className="px-1">
-        <h2 className="text-[20px] font-bold">{title}</h2>
+        <h2 className="text-[18px] font-semibold">{title}</h2>
         {subtitle && <p className="text-[13px] text-muted-foreground">{subtitle}</p>}
       </div>
       {children}
     </Reveal>
-  );
-}
-
-function Metric({
-  icon: Icon,
-  tint,
-  label,
-  value,
-}: {
-  icon: LucideIcon;
-  tint: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="surface p-4">
-      <div className="flex items-center gap-2">
-        <span
-          className="flex size-7 shrink-0 items-center justify-center rounded-full"
-          style={{ backgroundColor: `${tint}1f`, color: tint }}
-        >
-          <Icon className="size-4" strokeWidth={2.4} />
-        </span>
-        <span className="truncate text-[13px] font-medium text-muted-foreground">{label}</span>
-      </div>
-      {/* No dir="ltr": amounts are already bidi-isolated by formatMoney, and
-          forcing LTR reversed mixed values ("19 يوم" showed as "يوم 19"). */}
-      <p className={cn("mt-2.5 truncate font-bold leading-tight tabular", statValueSize(value))}>
-        {value}
-      </p>
-    </div>
   );
 }
 
@@ -324,10 +274,8 @@ function ChangeBadge({ change, prev }: { change: number; prev: string }) {
     <div className="mt-2 flex flex-col items-center gap-1">
       <span
         className={cn(
-          "flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] font-semibold",
-          up
-            ? "bg-[#ff3b30]/12 text-[#d70015] dark:text-[#ff6961]"
-            : "bg-[#34c759]/14 text-[#248a3d] dark:text-[#30d158]",
+          "flex items-center gap-1 text-[13px] font-semibold",
+          up ? "text-negative" : "text-positive",
         )}
       >
         <Icon className="size-4" />
@@ -341,27 +289,14 @@ function ChangeBadge({ change, prev }: { change: number; prev: string }) {
 function BudgetLine({ spent, budget, currency }: { spent: number; budget: number; currency: string }) {
   const ratio = spent / budget;
   const over = ratio > 1;
-  const tone = over ? "#ff3b30" : ratio >= 0.8 ? "#ff9f0a" : "var(--primary)";
   return (
-    <div className="mt-4 w-full space-y-1.5">
+    <div className="mt-5 w-full space-y-2">
+      <LedgerMeter ratio={ratio} label="نسبة استهلاك الميزانية" />
       <div className="flex justify-between text-[12px]">
-        <span className="text-muted-foreground">الميزانية</span>
-        <span className={cn("font-semibold tabular", over && "text-destructive")}>
-          {formatPercent(ratio)} من {formatMoney(budget, currency)}
+        <span className="text-muted-foreground">الميزانية {formatMoney(budget, currency)}</span>
+        <span className={cn("font-display font-semibold tabular", over && "text-negative")}>
+          {formatPercent(ratio)}
         </span>
-      </div>
-      <div
-        className="h-2 overflow-hidden rounded-full bg-foreground/[0.07] dark:bg-white/10"
-        role="progressbar"
-        aria-label="نسبة استهلاك الميزانية"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(Math.min(ratio, 1) * 100)}
-      >
-        <div
-          className="h-full rounded-full transition-[width] duration-700"
-          style={{ width: `${Math.min(ratio, 1) * 100}%`, backgroundColor: tone }}
-        />
       </div>
     </div>
   );
@@ -370,13 +305,13 @@ function BudgetLine({ spent, budget, currency }: { spent: number; budget: number
 function ReportSkeleton() {
   return (
     <div className="space-y-7" aria-busy>
-      <Skeleton className="h-[200px] rounded-[22px]" />
+      <Skeleton className="h-[200px] rounded-[16px]" />
       <div className="grid grid-cols-2 gap-3">
         {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-[92px] rounded-[22px]" />
+          <Skeleton key={i} className="h-[92px] rounded-[16px]" />
         ))}
       </div>
-      <Skeleton className="h-72 rounded-[22px]" />
+      <Skeleton className="h-72 rounded-[16px]" />
     </div>
   );
 }

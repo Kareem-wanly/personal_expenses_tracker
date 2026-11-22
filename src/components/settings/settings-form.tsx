@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronsUpDownIcon, CoinsIcon, Loader2Icon, PiggyBankIcon, UserIcon } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Group, Row, RowButton, RowIcon } from "@/components/ui/grouped-list";
@@ -31,6 +31,16 @@ export function SettingsForm({
     budget: monthlyBudget != null ? String(fromMinor(monthlyBudget)) : "",
   };
   const [values, setValues] = useState(initial);
+
+  // After a save, the server sends the stored values back as props: adopt
+  // them, so what's on screen is always what's saved.
+  const saved = `${initial.name}|${initial.currency}|${initial.budget}`;
+  const [lastSaved, setLastSaved] = useState(saved);
+  if (saved !== lastSaved) {
+    setLastSaved(saved);
+    setValues(initial);
+  }
+
   const dirty =
     values.name !== initial.name ||
     values.currency !== initial.currency ||
@@ -46,7 +56,16 @@ export function SettingsForm({
     setValues((v) => ({ ...v, [key]: e.target.value }));
 
   return (
-    <form action={action}>
+    // Submitted via onSubmit, not <form action>: React resets a form after
+    // an action, and a controlled <select> would then snap back to the
+    // option it first rendered with (the old currency) until a reload.
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const data = new FormData(e.currentTarget);
+        startTransition(() => action(data));
+      }}
+    >
       <Group
         header="الحساب"
         footer={
@@ -54,7 +73,7 @@ export function SettingsForm({
         }
       >
         <Row
-          leading={<RowIcon icon={UserIcon} tint="#8e8e93" />}
+          leading={<RowIcon icon={UserIcon} />}
           title={<label htmlFor="name">الاسم</label>}
           trailing={
             <input
@@ -69,7 +88,7 @@ export function SettingsForm({
           }
         />
         <Row
-          leading={<RowIcon icon={CoinsIcon} tint="#ff9f0a" />}
+          leading={<RowIcon icon={CoinsIcon} />}
           title={<label htmlFor="currency">العملة</label>}
           trailing={
             <span className="relative flex items-center gap-1 text-muted-foreground">
@@ -91,7 +110,7 @@ export function SettingsForm({
           }
         />
         <Row
-          leading={<RowIcon icon={PiggyBankIcon} tint="#34c759" />}
+          leading={<RowIcon icon={PiggyBankIcon} />}
           title={<label htmlFor="monthlyBudget">الميزانية الشهرية</label>}
           trailing={
             <input

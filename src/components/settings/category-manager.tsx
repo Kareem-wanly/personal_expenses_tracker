@@ -85,7 +85,7 @@ export function CategoryManager({
       </Group>
 
       <Drawer open={open} onOpenChange={setOpen} showSwipeHandle>
-        <DrawerContent className="mx-auto max-w-2xl border-t-0 bg-background data-[swipe-direction=down]:rounded-t-[28px] dark:bg-[#1c1c1e] dark:[--card:#2c2c2e]">
+        <DrawerContent className="mx-auto max-w-2xl border-t-0 bg-background data-[swipe-direction=down]:rounded-t-[22px]">
           <CategoryForm
             key={formKey}
             item={editing}
@@ -151,10 +151,14 @@ function CategoryForm({
             initial={{ scale: 0.85 }}
             animate={{ scale: 1 }}
             transition={SPRING}
-            className="flex size-20 items-center justify-center rounded-[22px] text-[40px] shadow-[0_14px_30px_-12px_var(--tile)]"
-            style={{ backgroundColor: color, ["--tile" as string]: color }}
+            className="relative flex size-20 items-center justify-center rounded-[18px] bg-foreground/[0.045] text-[40px] shadow-[inset_0_0_0_1px_var(--hairline)]"
           >
             {icon}
+            <span
+              aria-hidden
+              className="absolute -bottom-1 -end-1 size-4 rounded-full ring-[3px] ring-background"
+              style={{ backgroundColor: color }}
+            />
           </motion.span>
           <span className="text-[13px] text-muted-foreground">{name || "اسم التصنيف"}</span>
         </div>
@@ -282,7 +286,7 @@ function CategoryForm({
           disabled={pending}
           whileTap={{ scale: 0.97 }}
           transition={SPRING}
-          className="tint-button flex h-[52px] w-full items-center justify-center gap-2 rounded-full text-[17px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
+          className="tint-button flex h-[52px] w-full items-center justify-center gap-2 text-[17px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
         >
           {pending ? <Loader2Icon className="size-5 animate-spin" /> : <CheckIcon className="size-5" strokeWidth={2.6} />}
           {item ? "حفظ التعديلات" : "إضافة التصنيف"}

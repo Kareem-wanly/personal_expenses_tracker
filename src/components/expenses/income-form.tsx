@@ -105,9 +105,9 @@ export function IncomeForm({
             onChange={(e) => setAmount(e.target.value)}
             aria-invalid={!!state.fieldErrors?.amount}
             style={{ fontSize: amountSize }}
-            className="h-[72px] w-full bg-transparent text-center font-bold leading-none tracking-tight text-[#248a3d] caret-primary tabular outline-none transition-[font-size] duration-200 placeholder:text-foreground/20 dark:text-[#30d158]"
+            className="h-[72px] w-full bg-transparent text-center font-display font-semibold leading-none text-positive caret-primary tabular outline-none transition-[font-size] duration-200 placeholder:text-foreground/20"
           />
-          <span className="mt-1 rounded-full bg-[#34c759]/15 px-3 py-1 text-[13px] font-semibold text-[#248a3d] dark:text-[#30d158]">
+          <span className="mt-1 text-[13px] font-semibold tracking-wide text-positive">
             + {currency}
           </span>
           {state.fieldErrors?.amount && (
@@ -130,14 +130,13 @@ export function IncomeForm({
                   className="flex flex-col items-center gap-1.5 outline-none"
                 >
                   <motion.span
-                    animate={{ scale: selected ? 1.06 : 1 }}
-                    whileTap={{ scale: 0.88 }}
+                    whileTap={{ scale: 0.92 }}
                     transition={SPRING}
-                    className="flex size-14 items-center justify-center rounded-[16px] text-[26px]"
-                    style={{
-                      backgroundColor: selected ? meta.color : `${meta.color}1f`,
-                      boxShadow: selected ? `0 10px 20px -8px ${meta.color}` : "none",
-                    }}
+                    className={
+                      selected
+                        ? "flex size-14 items-center justify-center rounded-[14px] bg-card text-[26px] shadow-[inset_0_0_0_2px_var(--ink)]"
+                        : "flex size-14 items-center justify-center rounded-[14px] bg-foreground/[0.045] text-[26px] shadow-[inset_0_0_0_1px_var(--hairline)]"
+                    }
                   >
                     {meta.icon}
                   </motion.span>
@@ -151,7 +150,7 @@ export function IncomeForm({
         </fieldset>
 
         <div className="surface inset-list overflow-hidden">
-          <SheetRow icon={CalendarDaysIcon} tint="#ff3b30" label="التاريخ">
+          <SheetRow icon={CalendarDaysIcon} label="التاريخ">
             <SegmentedControl
               label="التاريخ"
               value={dateMode}
@@ -188,7 +187,7 @@ export function IncomeForm({
               </motion.div>
             )}
           </AnimatePresence>
-          <SheetRow icon={PencilLineIcon} tint="#8e8e93">
+          <SheetRow icon={PencilLineIcon}>
             <input
               name="note"
               maxLength={120}
@@ -207,7 +206,7 @@ export function IncomeForm({
           disabled={pending}
           whileTap={{ scale: 0.97 }}
           transition={SPRING}
-          className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#34c759] text-[17px] font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
+          className="tint-button flex h-[52px] w-full items-center justify-center gap-2 text-[17px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
         >
           {pending ? <Loader2Icon className="size-5 animate-spin" /> : <CheckIcon className="size-5" strokeWidth={2.6} />}
           {income ? "حفظ التعديلات" : "إضافة الدخل"}

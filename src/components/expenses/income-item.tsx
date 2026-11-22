@@ -17,8 +17,7 @@ export function IncomeItem({ item, currency, meta }: { item: IncomeRow; currency
     >
       <span
         aria-hidden
-        className="flex size-10 shrink-0 items-center justify-center rounded-[11px] text-lg"
-        style={{ backgroundColor: `${source.color}22` }}
+        className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-foreground/[0.045] text-lg ring-1 ring-inset ring-hairline"
       >
         {source.icon}
       </span>
@@ -29,7 +28,7 @@ export function IncomeItem({ item, currency, meta }: { item: IncomeRow; currency
             {[item.note ? source.label : null, meta].filter(Boolean).join(" · ")}
           </p>
         </div>
-        <span className="shrink-0 text-[16px] font-semibold text-[#248a3d] tabular dark:text-[#30d158]">
+        <span className="shrink-0 text-[16px] font-semibold text-positive tabular">
           +{formatMoney(item.amount, currency)}
         </span>
       </div>

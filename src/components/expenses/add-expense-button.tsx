@@ -18,7 +18,7 @@ export function AddExpenseButton({
       type="button"
       onClick={() => openExpenseForm()}
       className={cn(
-        "tint-button mt-2 inline-flex h-11 items-center justify-center gap-1.5 rounded-full px-6 text-[15px] font-semibold transition-transform active:scale-95",
+        "tint-button inline-flex h-11 items-center justify-center gap-1.5 px-5 text-[15px] font-semibold",
         className,
       )}
     >

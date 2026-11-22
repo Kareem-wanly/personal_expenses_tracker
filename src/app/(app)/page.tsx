@@ -1,10 +1,5 @@
 import {
-  CalendarRangeIcon,
   ChevronLeftIcon,
-  GaugeIcon,
-  type LucideIcon,
-  SunIcon,
-  TrendingUpIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { Suspense, ViewTransition } from "react";
@@ -14,19 +9,17 @@ import { EmptyState } from "@/components/empty-state";
 import { AddExpenseButton } from "@/components/expenses/add-expense-button";
 import { ExpenseItem } from "@/components/expenses/expense-item";
 import { InsightsList } from "@/components/insights-list";
+import { LedgerMeter, LedgerRows } from "@/components/ledger";
 import { PageHeader } from "@/components/layout/page-header";
 import { TabScreen } from "@/components/layout/tab-screen";
 import { AnimatedMoney } from "@/components/motion/animated-money";
-import { BudgetRing } from "@/components/motion/budget-ring";
 import { Reveal } from "@/components/motion/reveal";
 import { NotificationPrompt } from "@/components/notification-prompt";
 import { SpendingBreakdown } from "@/components/spending-breakdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDayLabel, formatMonthLabel, parseISODate } from "@/lib/dates";
-import { statValueSize } from "@/lib/fit-text";
 import { formatMoney } from "@/lib/money";
 import { TAB_FORWARD } from "@/lib/tabs";
-import { cn } from "@/lib/utils";
 import { getDashboardData, getInsights, getUserToday } from "@/server/queries";
 
 export default function HomePage() {
@@ -70,7 +63,7 @@ async function Dashboard() {
             href="/settings"
             transitionTypes={[TAB_FORWARD]}
             aria-label="الإعدادات"
-            className="pressable flex size-10 items-center justify-center rounded-full bg-gradient-to-b from-[#a1a1a6] to-[#6e6e73] text-[15px] font-semibold text-white shadow-sm"
+            className="pressable flex size-10 items-center justify-center rounded-full bg-ink font-display text-[15px] font-semibold text-ink-foreground"
           >
             {firstName.slice(0, 1)}
           </Link>
@@ -83,6 +76,7 @@ async function Dashboard() {
           total={d.monthTotal}
           budget={d.user.monthlyBudget}
           daysLeft={d.daysLeft}
+          pace={d.pace}
           currency={currency}
         />
       </Reveal>
@@ -99,26 +93,21 @@ async function Dashboard() {
         />
       </Reveal>
 
-      <Reveal index={1} className="grid grid-cols-2 gap-3">
-        <Stat icon={SunIcon} tint="#ff9f0a" label="اليوم" value={formatMoney(d.todayTotal, currency)} />
-        <Stat
-          icon={CalendarRangeIcon}
-          tint="#0a84ff"
-          label="هذا الأسبوع"
-          value={formatMoney(d.weekTotal, currency)}
-        />
-        <Stat
-          icon={GaugeIcon}
-          tint="#bf5af2"
-          label="المعدّل اليومي"
-          value={formatMoney(d.dailyAverage, currency)}
-        />
-        <Stat
-          icon={TrendingUpIcon}
-          tint="#30b0c7"
-          label="المتوقّع للشهر"
-          value={formatMoney(d.projected, currency)}
-        />
+      <Reveal index={1}>
+        <div className="surface px-4 py-4">
+          <LedgerRows
+            rows={[
+              { label: "اليوم", value: formatMoney(d.todayTotal, currency) },
+              { label: "هذا الأسبوع", value: formatMoney(d.weekTotal, currency) },
+              { label: "المعدّل اليومي", value: formatMoney(d.dailyAverage, currency) },
+              {
+                label: "المتوقّع للشهر",
+                value: formatMoney(d.projected, currency),
+                tone: d.user.monthlyBudget && d.projected > d.user.monthlyBudget ? "warning" : "default",
+              },
+            ]}
+          />
+        </div>
       </Reveal>
 
       {!hasData ? (
@@ -127,7 +116,7 @@ async function Dashboard() {
             icon="💸"
             title="لا توجد مصاريف بعد"
             description="ابدأ بتسجيل أول مصروف لك، وسنحسب لك كل شيء تلقائياً."
-            action={<AddExpenseButton label="أضف أول مصروف" className="mt-2 h-11 rounded-full px-6" />}
+            action={<AddExpenseButton label="أضف أول مصروف" className="mt-1" />}
           />
         </Reveal>
       ) : (
@@ -172,115 +161,73 @@ async function DashboardInsights({ month, today }: { month: string; today: strin
   );
 }
 
-/** Wallet-style hero card: month total, budget ring, what's left. */
+/**
+ * Month header set like a ledger page: the month on a ruled line, the total
+ * as a large figure, then a ruled budget meter with a pace notch.
+ */
 function MonthCard({
   month,
   total,
   budget,
   daysLeft,
+  pace,
   currency,
 }: {
   month: string;
   total: number;
   budget: number | null;
   daysLeft: number;
+  pace: number;
   currency: string;
 }) {
   const ratio = budget ? total / budget : 0;
   const over = !!budget && total > budget;
 
   return (
-    <section
-      aria-label="ملخّص الشهر"
-      className="relative isolate overflow-hidden rounded-[28px] p-5 text-white shadow-[0_20px_44px_-18px_rgb(4_120_87/0.6)]"
-    >
-      {/* Layered gradients give the card depth without an image. */}
-      <div
-        aria-hidden
-        className="absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(120% 90% at 100% 0%, rgb(255 255 255 / 0.28), transparent 55%)," +
-            "radial-gradient(90% 80% at 0% 100%, rgb(0 60 45 / 0.55), transparent 60%)," +
-            "linear-gradient(150deg, #19c27a 0%, #0c9a63 45%, #066b49 100%)",
-        }}
-      />
-      <div aria-hidden className="absolute inset-0 -z-10 rounded-[28px] ring-1 ring-inset ring-white/15" />
-
-      <div className="flex items-center justify-between text-[13px] font-medium text-white/80">
-        <span>مصاريف {formatMonthLabel(month)}</span>
-        <span className="rounded-full bg-white/15 px-2.5 py-1 text-[12px] backdrop-blur">
-          {daysLeft === 0 ? "آخر يوم" : `متبقّي ${daysLeft} يوم`}
+    <section aria-label="ملخّص الشهر" className="pt-1">
+      <div className="section-label">
+        <span>{formatMonthLabel(month)}</span>
+      </div>
+      <div className="mt-3 flex items-baseline justify-between gap-3">
+        <AnimatedMoney
+          value={total}
+          currency={currency}
+          className="block font-display text-[clamp(2.4rem,12vw,3.25rem)] font-semibold leading-none whitespace-nowrap tabular"
+        />
+        <span className="shrink-0 text-[13px] text-muted-foreground">
+          {daysLeft === 0 ? "آخر يوم في الشهر" : `${daysLeft} يوم متبقّية`}
         </span>
       </div>
+      <p className="mt-1 text-[14px] text-muted-foreground">صرفت هذا الشهر</p>
 
-      <div className="mt-4 flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          <AnimatedMoney
-            value={total}
-            currency={currency}
-            className="block text-[clamp(1.75rem,9vw,2.25rem)] font-bold leading-none tracking-tight whitespace-nowrap tabular"
-          />
-          {budget ? (
-            <p className="mt-3 text-[14px] text-white/85">
+      {budget ? (
+        <div className="mt-5 space-y-2">
+          <LedgerMeter ratio={ratio} pace={pace} label="نسبة استهلاك الميزانية" />
+          <div className="flex items-baseline justify-between text-[13px]">
+            <span className={over ? "font-medium text-negative" : "text-muted-foreground"}>
               {over ? (
-                <>
-                  تجاوزت الميزانية بـ{" "}
-                  <span className="font-semibold text-white">{formatMoney(total - budget, currency)}</span>
-                </>
+                <>تجاوزت الميزانية بـ {formatMoney(total - budget, currency)}</>
               ) : (
                 <>
-                  متبقّي{" "}
-                  <span className="font-semibold text-white">{formatMoney(budget - total, currency)}</span>{" "}
-                  من {formatMoney(budget, currency)}
+                  متبقّي <b className="font-semibold text-foreground">{formatMoney(budget - total, currency)}</b> من{" "}
+                  {formatMoney(budget, currency)}
                 </>
               )}
-            </p>
-          ) : (
-            <Link
-              href="/settings"
-              transitionTypes={[TAB_FORWARD]}
-              className="mt-3 inline-flex items-center gap-1 text-[14px] font-medium text-white/90"
-            >
-              حدّد ميزانية شهرية
-              <ChevronLeftIcon className="size-4" />
-            </Link>
-          )}
+            </span>
+            <span className="font-display font-semibold tabular">{Math.round(ratio * 100)}%</span>
+          </div>
         </div>
-        {budget ? <BudgetRing ratio={ratio} size={76} stroke={10} /> : null}
-      </div>
-    </section>
-  );
-}
-
-function Stat({
-  icon: Icon,
-  tint,
-  label,
-  value,
-}: {
-  icon: LucideIcon;
-  tint: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="surface p-4">
-      <div className="flex items-center gap-2">
-        <span
-          className="flex size-7 items-center justify-center rounded-full"
-          style={{ backgroundColor: `${tint}1f`, color: tint }}
+      ) : (
+        <Link
+          href="/settings"
+          transitionTypes={[TAB_FORWARD]}
+          className="mt-4 inline-flex items-center gap-1 text-[14px] font-medium text-primary"
         >
-          <Icon className="size-4" strokeWidth={2.4} />
-        </span>
-        <span className="text-[13px] font-medium text-muted-foreground">{label}</span>
-      </div>
-      {/* No dir="ltr": amounts are already bidi-isolated by formatMoney, and
-          forcing LTR would reverse mixed Arabic values like "19 يوم". */}
-      <p className={cn("mt-2.5 truncate font-bold leading-tight tabular", statValueSize(value))}>
-        {value}
-      </p>
-    </div>
+          حدّد ميزانية شهرية
+          <ChevronLeftIcon className="size-4" />
+        </Link>
+      )}
+    </section>
   );
 }
 
@@ -295,7 +242,7 @@ function SectionTitle({
 }) {
   return (
     <div className="flex items-baseline justify-between px-1">
-      <h2 className="text-[20px] font-bold">{title}</h2>
+      <h2 className="text-[18px] font-semibold">{title}</h2>
       <Link
         href={href}
         transitionTypes={[TAB_FORWARD]}

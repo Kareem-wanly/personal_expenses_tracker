@@ -87,7 +87,7 @@ async function Account() {
     <Reveal index={0} className="space-y-6">
       {/* Profile card, like the Apple ID header in Settings. */}
       <div className="surface flex items-center gap-4 p-4">
-        <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#a1a1a6] to-[#6e6e73] text-[28px] font-semibold text-white">
+        <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-ink font-display text-[28px] font-semibold text-ink-foreground">
           {initial}
         </span>
         <div className="min-w-0">

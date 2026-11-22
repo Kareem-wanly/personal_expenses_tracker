@@ -28,15 +28,14 @@ export function Group({
   );
 }
 
-/** Settings-style glyph tile. */
-export function RowIcon({ icon: Icon, tint }: { icon: LucideIcon; tint: string }) {
+/**
+ * Leading glyph for a row: a plain line icon in the text colour. Rows get
+ * their identity from the label, not from a rainbow of coloured tiles.
+ */
+export function RowIcon({ icon: Icon }: { icon: LucideIcon }) {
   return (
-    <span
-      aria-hidden
-      className="flex size-[30px] shrink-0 items-center justify-center rounded-[8px] text-white"
-      style={{ backgroundColor: tint }}
-    >
-      <Icon className="size-[18px]" strokeWidth={2.2} />
+    <span aria-hidden className="flex size-6 shrink-0 items-center justify-center text-foreground/70">
+      <Icon className="size-[19px]" strokeWidth={1.75} />
     </span>
   );
 }

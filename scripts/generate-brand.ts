@@ -73,32 +73,37 @@ async function launchImages() {
     newPage(o: { viewport: { width: number; height: number }; deviceScaleFactor: number }): Promise<Page>;
     close(): Promise<void>;
   };
-  let chromium: { launch(): Promise<Browser> };
+  let chromium: { launch(o?: { executablePath?: string }): Promise<Browser> };
   try {
     // require (not import) so NODE_PATH works with a globally installed copy.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    ({ chromium } = require("playwright"));
+    // `playwright-core` + CHROME_PATH works too, using an installed Chrome.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      ({ chromium } = require("playwright"));
+    } catch {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      ({ chromium } = require("playwright-core"));
+    }
   } catch {
     console.warn("⚠ Playwright not found — skipping launch images (npm i -D playwright).");
     return;
   }
-  const font = await readFile(
-    "node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-700-normal.woff2",
-  );
+  const font = await readFile("node_modules/@fontsource/reem-kufi/files/reem-kufi-arabic-600-normal.woff2");
   const html = `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><style>
-@font-face{font-family:SplashFont;font-weight:700;src:url(data:font/woff2;base64,${font.toString("base64")}) format("woff2")}
+@font-face{font-family:SplashFont;font-weight:600;src:url(data:font/woff2;base64,${font.toString("base64")}) format("woff2")}
 html,body{margin:0;height:100%}:root{--splash-font:SplashFont}${SPLASH_CSS}
 </style></head><body><div class="splash">${splashInnerHtml()}</div></body></html>`;
 
   await mkdir("public/splash", { recursive: true });
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(
+    process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : undefined,
+  );
   for (const d of STARTUP_DEVICES) {
     const page = await browser.newPage({ viewport: { width: d.w, height: d.h }, deviceScaleFactor: d.r });
     await page.setContent(html);
     await page.evaluate(() => document.fonts.ready);
     const shot = await page.screenshot({ type: "png" });
-    // JPEG: a full-colour PNG of a gradient is ~1 MB, and a reduced palette
-    // bands it. 4:4:4 chroma keeps the white edges crisp.
+    // JPEG keeps each image small; 4:4:4 chroma keeps the edges crisp.
     await sharp(shot)
       .jpeg({ quality: 88, mozjpeg: true, chromaSubsampling: "4:4:4" })
       .toFile(`public${startupImagePath(d)}`);

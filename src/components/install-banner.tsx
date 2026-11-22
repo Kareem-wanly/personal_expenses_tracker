@@ -59,7 +59,7 @@ export function InstallBanner() {
 
   async function install() {
     const accepted = await promptInstall();
-    if (accepted) toast.success(`تم تثبيت ${APP_NAME} 🎉`);
+    if (accepted) toast.success(`تم تثبيت ${APP_NAME}`);
     else dismiss();
   }
 
@@ -76,10 +76,10 @@ export function InstallBanner() {
           : "bottom-[calc(1rem+env(safe-area-inset-bottom))]",
       )}
     >
-      <div className="glass rounded-[22px] p-4 text-popover-foreground">
+      <div className="rounded-[16px] bg-card p-4 text-card-foreground shadow-[0_0_0_1px_var(--hairline),0_10px_30px_-18px_rgb(0_0_0/0.45)]">
         <div className="flex items-start gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/icon-192.png" alt="" className="size-12 rounded-[13px] shadow" />
+          <img src="/icons/icon-192.png" alt="" className="size-12 rounded-[12px] ring-1 ring-hairline" />
           <div className="min-w-0 flex-1">
             <p id="install-title" className="text-[16px] font-semibold">
               ثبّت {APP_NAME} على جوالك
@@ -103,7 +103,7 @@ export function InstallBanner() {
             <button
               type="button"
               onClick={install}
-              className="tint-button flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full text-[15px] font-semibold active:scale-[0.97]"
+              className="tint-button flex h-11 flex-1 items-center justify-center gap-1.5 text-[15px] font-semibold active:scale-[0.97]"
             >
               <DownloadIcon className="size-[18px]" />
               تثبيت التطبيق
@@ -111,7 +111,7 @@ export function InstallBanner() {
             <button
               type="button"
               onClick={dismiss}
-              className="h-11 rounded-full px-4 text-[15px] font-medium text-primary active:opacity-60"
+              className="h-11 px-4 text-[15px] font-medium text-muted-foreground active:opacity-60"
             >
               لاحقاً
             </button>

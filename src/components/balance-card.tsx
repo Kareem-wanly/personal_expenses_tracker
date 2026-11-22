@@ -1,11 +1,11 @@
 import { AddIncomeButton } from "@/components/expenses/add-income-button";
-import { compactValueSize } from "@/lib/fit-text";
+import { LedgerRows } from "@/components/ledger";
 import { formatMoney, formatPercent } from "@/lib/money";
-import { cn } from "@/lib/utils";
 
 /**
- * Income vs spending for the month and the all-time balance. Without any
- * income yet, it invites the user to add one (balance needs both sides).
+ * Income vs spending for the month and the all-time balance, set as ledger
+ * rows under a split bar (how much of the income is spent). Without income
+ * yet, it asks for it in one line.
  */
 export function BalanceCard({
   hasIncome,
@@ -22,76 +22,56 @@ export function BalanceCard({
 }) {
   if (!hasIncome) {
     return (
-      <div className="surface flex items-center gap-3 p-4">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-[#34c759]/15 text-[22px]">
-          💼
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-semibold">اعرف كم توفّر</p>
-          <p className="text-[13px] text-muted-foreground">سجّل دخلك (راتب، عمل حر…) لنحسب رصيدك ونسبة ادخارك.</p>
+      <div className="surface flex items-center justify-between gap-3 px-4 py-3.5">
+        <div className="min-w-0">
+          <p className="text-[15px] font-semibold">كم توفّر كل شهر؟</p>
+          <p className="text-[13px] text-muted-foreground">سجّل دخلك لنحسب الصافي والرصيد.</p>
         </div>
-        <AddIncomeButton label="دخل" className="shrink-0" />
+        <AddIncomeButton label="إضافة دخل" className="shrink-0" />
       </div>
     );
   }
 
   const net = income - spent;
   const rate = income > 0 ? net / income : null;
+  const spentShare = income > 0 ? Math.min(spent / income, 1) : 1;
 
   return (
-    <div className="surface p-4">
+    <div className="surface px-4 py-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-[15px] font-semibold">الدخل والرصيد</h2>
+        <h2 className="text-[16px] font-semibold">الدخل والرصيد</h2>
         <AddIncomeButton label="دخل" />
       </div>
 
-      <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-[14px] bg-[#34c759]/10 px-1 py-2.5">
-          <dt className="text-[12px] text-muted-foreground">دخل الشهر</dt>
-          <dd
-            className={cn(
-              "mt-0.5 truncate font-bold text-[#248a3d] tabular dark:text-[#30d158]",
-              compactValueSize(formatMoney(income, currency)),
-            )}
-          >
-            {formatMoney(income, currency)}
-          </dd>
+      {income > 0 && (
+        <div className="mt-3" aria-hidden>
+          <div className="flex h-2 overflow-hidden rounded-full bg-positive/25">
+            <div
+              className={net < 0 ? "h-full bg-negative" : "h-full bg-ink"}
+              style={{ width: `${spentShare * 100}%` }}
+            />
+          </div>
+          <div className="mt-1.5 flex justify-between text-[12px] text-muted-foreground">
+            <span>مصروف {formatPercent(spent / income)}</span>
+            <span>{rate !== null && rate >= 0 ? `مدّخر ${formatPercent(rate)}` : "تجاوزت الدخل"}</span>
+          </div>
         </div>
-        <div className="rounded-[14px] bg-foreground/[0.05] px-1 py-2.5">
-          <dt className="text-[12px] text-muted-foreground">صرفت</dt>
-          <dd className={cn("mt-0.5 truncate font-bold tabular", compactValueSize(formatMoney(spent, currency)))}>
-            {formatMoney(spent, currency)}
-          </dd>
-        </div>
-        <div className={cn("rounded-[14px] px-1 py-2.5", net >= 0 ? "bg-[#0a84ff]/10" : "bg-[#ff3b30]/10")}>
-          <dt className="text-[12px] text-muted-foreground">صافي الشهر</dt>
-          <dd
-            className={cn(
-              "mt-0.5 truncate font-bold tabular",
-              compactValueSize(formatMoney(net, currency)),
-              net >= 0 ? "text-[#0a84ff]" : "text-[#d70015] dark:text-[#ff6961]",
-            )}
-          >
-            {formatMoney(net, currency)}
-          </dd>
-        </div>
-      </dl>
+      )}
 
-      <div className="mt-3 flex items-center justify-between border-t border-foreground/[0.08] pt-3 text-[13px]">
-        <span className="text-muted-foreground">
-          {rate === null
-            ? "لا دخل مسجّل هذا الشهر"
-            : rate >= 0
-              ? `نسبة الادخار ${formatPercent(rate)}`
-              : "مصاريفك تجاوزت دخلك هذا الشهر"}
-        </span>
-        <span>
-          الرصيد الكلي{" "}
-          <b className={cn("tabular", balance < 0 && "text-[#d70015] dark:text-[#ff6961]")}>
-            {formatMoney(balance, currency)}
-          </b>
-        </span>
-      </div>
+      <LedgerRows
+        className="mt-4"
+        rows={[
+          { label: "دخل الشهر", value: formatMoney(income, currency), tone: "positive" },
+          { label: "صرفت", value: formatMoney(spent, currency) },
+          { label: "صافي الشهر", value: formatMoney(net, currency), tone: net >= 0 ? "default" : "negative" },
+          {
+            label: "الرصيد الكلي",
+            value: formatMoney(balance, currency),
+            tone: balance < 0 ? "negative" : "default",
+            hint: "كل الدخل ناقص كل المصاريف حتى اليوم",
+          },
+        ]}
+      />
     </div>
   );
 }

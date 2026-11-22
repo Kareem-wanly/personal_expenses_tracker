@@ -1,5 +1,9 @@
+/**
+ * Empty state: a short headline and one line of guidance, set as text on a
+ * ruled card. (`icon` is accepted for call-site compatibility; empty states
+ * deliberately don't show a big emoji.)
+ */
 export function EmptyState({
-  icon = "🧾",
   title,
   description,
   action,
@@ -10,18 +14,10 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="surface flex flex-col items-center gap-2 px-6 py-10 text-center">
-      <span
-        className="mb-1 flex size-16 items-center justify-center rounded-[20px] bg-foreground/[0.05] text-4xl dark:bg-white/[0.08]"
-        aria-hidden
-      >
-        {icon}
-      </span>
-      <p className="text-[17px] font-semibold">{title}</p>
-      {description && (
-        <p className="max-w-xs text-[15px] text-muted-foreground">{description}</p>
-      )}
-      {action}
+    <div className="surface flex flex-col items-start gap-1.5 px-5 py-6">
+      <p className="font-display text-[18px] font-semibold">{title}</p>
+      {description && <p className="max-w-xs text-[14px] leading-relaxed text-muted-foreground">{description}</p>}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   );
 }

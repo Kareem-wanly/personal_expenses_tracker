@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans_Arabic } from "next/font/google";
+import { Noto_Kufi_Arabic, Reem_Kufi } from "next/font/google";
 
 import { Providers } from "@/components/providers";
 import {
@@ -14,10 +14,19 @@ import {
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants";
 import "./globals.css";
 
-const font = IBM_Plex_Sans_Arabic({
-  variable: "--font-plex",
+/** Body text: a Kufi workhorse that stays readable at small sizes. */
+const font = Noto_Kufi_Arabic({
+  variable: "--font-body",
   subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "variable",
+  display: "swap",
+});
+
+/** Display: geometric Kufi for headings and every big figure (see globals.css). */
+const display = Reem_Kufi({
+  variable: "--font-display",
+  subsets: ["arabic", "latin"],
+  weight: "variable",
   display: "swap",
 });
 
@@ -48,8 +57,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+    { media: "(prefers-color-scheme: light)", color: "#f3f0e8" },
+    { media: "(prefers-color-scheme: dark)", color: "#12110e" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -61,7 +70,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="ar"
       dir="rtl"
-      className={`${font.variable} h-full`}
+      className={`${font.variable} ${display.variable} h-full`}
       suppressHydrationWarning
     >
       <head>
@@ -78,7 +87,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div
           className="splash"
           aria-hidden
-          style={{ "--splash-font": "var(--font-plex)" } as React.CSSProperties}
+          style={{ "--splash-font": "var(--font-display)" } as React.CSSProperties}
           dangerouslySetInnerHTML={{ __html: splashInnerHtml() }}
         />
         <Providers>{children}</Providers>

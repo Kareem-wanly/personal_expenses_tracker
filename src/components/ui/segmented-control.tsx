@@ -59,7 +59,7 @@ export function SegmentedControl<T extends string>({
               <motion.span
                 layoutId={`${id}-thumb`}
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
-                className="absolute inset-0 rounded-[8px] bg-card shadow-[0_3px_8px_rgb(0_0_0/0.12),0_3px_1px_rgb(0_0_0/0.04)] dark:bg-[#636366]"
+                className="absolute inset-0 rounded-[8px] bg-card shadow-[0_0_0_1px_var(--hairline)] dark:bg-[#3a3830]"
               />
             )}
             <span className="relative">{o.label}</span>

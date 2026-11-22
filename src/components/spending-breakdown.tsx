@@ -11,7 +11,7 @@ const EASE = [0.32, 0.72, 0, 1] as const;
 /** Thin progress line under a category that has its own monthly budget. */
 function CategoryBudget({ spent, budget, currency }: { spent: number; budget: number; currency: string }) {
   const ratio = spent / budget;
-  const tone = ratio >= 1 ? "#ff3b30" : ratio >= 0.8 ? "#ff9f0a" : "#34c759";
+  const tone = ratio >= 1 ? "var(--negative)" : ratio >= 0.8 ? "var(--warning)" : "var(--ink)";
   return (
     <div className="mt-1.5 flex items-center gap-2">
       <div
@@ -69,7 +69,7 @@ export function SpendingBreakdown({
             categoryId: "rest",
             name: "أخرى",
             icon: "•",
-            color: "#8e8e93",
+            color: "var(--muted-foreground)",
             budget: null,
             total: restTotal,
             count: 0,

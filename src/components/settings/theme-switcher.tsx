@@ -26,7 +26,7 @@ export function ThemeSwitcher() {
   return (
     <Group header="المظهر" footer="«تلقائي» يتبع إعداد جهازك.">
       <Row
-        leading={<RowIcon icon={PaletteIcon} tint="#5856d6" />}
+        leading={<RowIcon icon={PaletteIcon} />}
         title="السِّمة"
         trailing={
           <SegmentedControl

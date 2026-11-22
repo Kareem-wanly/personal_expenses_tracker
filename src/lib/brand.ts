@@ -7,27 +7,26 @@
  * while launching and the first frame of the in-app splash are identical.
  */
 
+/**
+ * "دفتر" brand: flat ink tile, paper wallet, one persimmon card. No
+ * gradients, highlights or drop shadows — same palette as the app.
+ */
 export const BRAND = {
-  /** Gradient stops of the icon tile and the splash background. */
-  light: "#2dd48f",
-  mid: "#0fa56c",
-  deep: "#067a50",
-  /** Solid fallback (Android splash, maskable padding). */
-  solid: "#0c9a64",
+  ink: "#1a1915",
+  paper: "#f3f0e8",
+  accent: "#c8502b",
+  /** Solid background (icon tile, Android splash, maskable padding). */
+  solid: "#1a1915",
 } as const;
 
-const DEFS = `<defs>
-<linearGradient id="mx-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${BRAND.light}"/><stop offset=".55" stop-color="${BRAND.mid}"/><stop offset="1" stop-color="${BRAND.deep}"/></linearGradient>
-<radialGradient id="mx-hl" cx=".25" cy=".1" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
-<filter id="mx-sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#023d27" flood-opacity=".35"/></filter>
-</defs>`;
+const DEFS = "";
 
 /** The wallet: a card tucked behind, the wallet, and its clasp. 1024 grid. */
-const WALLET = `<g filter="url(#mx-sh)">
-<g class="splash-card"><rect x="262" y="250" width="520" height="330" rx="64" fill="#fff" opacity=".45" transform="rotate(-9 522 415)"/></g>
-<rect x="196" y="352" width="632" height="440" rx="88" fill="#fff"/>
-<rect x="610" y="498" width="218" height="148" rx="74" fill="${BRAND.solid}"/>
-<circle cx="684" cy="572" r="30" fill="#fff"/>
+const WALLET = `<g>
+<g class="splash-card"><rect x="262" y="250" width="520" height="330" rx="56" fill="${BRAND.accent}" transform="rotate(-9 522 415)"/></g>
+<rect x="196" y="352" width="632" height="440" rx="76" fill="${BRAND.paper}"/>
+<rect x="610" y="498" width="218" height="148" rx="74" fill="${BRAND.ink}"/>
+<circle cx="684" cy="572" r="30" fill="${BRAND.paper}"/>
 </g>`;
 
 /**
@@ -38,7 +37,7 @@ export function iconSvg({ fullBleed = false, scale = 1 } = {}) {
   const rx = fullBleed ? 0 : 230;
   const t = scale === 1 ? "" : ` transform="translate(${512 * (1 - scale)} ${512 * (1 - scale)}) scale(${scale})"`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">${DEFS}
-<rect width="1024" height="1024" rx="${rx}" fill="url(#mx-bg)"/><rect width="1024" height="1024" rx="${rx}" fill="url(#mx-hl)"/>
+<rect width="1024" height="1024" rx="${rx}" fill="${BRAND.solid}"/>
 <g${t}>${WALLET}</g></svg>`;
 }
 
@@ -65,16 +64,17 @@ export function splashInnerHtml() {
 }
 
 /**
- * Splash styles. `--splash-font` is set by the host: the app's Plex
- * variable in the layout, an @font-face of the same file in the generator.
+ * Splash styles. `--splash-font` is set by the host: the app's display
+ * face (Reem Kufi) in the layout, an @font-face of the same face in the
+ * generator.
  */
 export const SPLASH_CSS = `
 .splash{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(120% 70% at 20% 0%,rgb(255 255 255/.28),transparent 60%),linear-gradient(160deg,${BRAND.light} 0%,${BRAND.mid} 52%,${BRAND.deep} 100%);
-  color:#fff;-webkit-user-select:none;user-select:none;pointer-events:none}
+  background:${BRAND.ink};
+  color:${BRAND.paper};-webkit-user-select:none;user-select:none;pointer-events:none}
 .splash-group{display:flex;flex-direction:column;align-items:center;gap:min(4.5vw,2.6vh,28px);margin-bottom:9vh}
 .splash-mark{width:min(38vw,24vh,260px);height:auto;overflow:visible}
-.splash-word{font-family:var(--splash-font);font-weight:700;font-size:min(9.5vw,6vh,60px);line-height:1.2;letter-spacing:0}
+.splash-word{font-family:var(--splash-font);font-weight:600;font-size:min(9.5vw,6vh,60px);line-height:1.2;letter-spacing:0}
 `;
 
 /**

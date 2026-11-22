@@ -82,7 +82,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
     <form action={onSubmit} className="space-y-4">
       <Reveal index={1}>
         <h2 className="mb-3 px-4 text-[13px] font-medium text-muted-foreground">
-          {isLogin ? "أهلاً بعودتك 👋 سجّل دخولك للمتابعة" : "أنشئ حسابك المجاني في ثوانٍ"}
+          {isLogin ? "سجّل دخولك للمتابعة" : "أنشئ حسابك المجاني في ثوانٍ"}
         </h2>
         <div ref={scope} className="surface inset-list overflow-hidden">
           {!isLogin && (
@@ -146,7 +146,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
           disabled={pending}
           whileTap={{ scale: 0.97 }}
           transition={{ type: "spring", stiffness: 520, damping: 30 }}
-          className="tint-button flex h-[52px] w-full items-center justify-center gap-2 rounded-full text-[17px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
+          className="tint-button flex h-[52px] w-full items-center justify-center gap-2 text-[17px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
         >
           {pending && <Loader2Icon className="size-5 animate-spin" />}
           {isLogin ? "تسجيل الدخول" : "إنشاء حساب"}

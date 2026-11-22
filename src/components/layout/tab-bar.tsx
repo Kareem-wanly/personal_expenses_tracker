@@ -3,6 +3,7 @@
 import { PlusIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
+import { Fragment } from "react";
 
 import { openExpenseForm } from "@/components/expenses/expense-form-store";
 import { TAB_ICONS } from "@/components/layout/tab-icons";
@@ -11,67 +12,66 @@ import { cn } from "@/lib/utils";
 
 import { useTabNav } from "./tab-nav";
 
-const PILL_SPRING = { type: "spring", stiffness: 480, damping: 38 } as const;
+const MARK_SPRING = { type: "spring", stiffness: 520, damping: 40 } as const;
 
 /**
- * Floating glass tab bar with a sliding selection pill, plus a separate
- * round "add" button — the main action is always one tap away.
+ * Docked tab bar on paper: hairline on top, a short accent rule over the
+ * active tab, and the "add" action as an ink key in the middle.
  */
 export function TabBar() {
   const { current, active, markPending } = useTabNav();
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 pb-[max(env(safe-area-inset-bottom),14px)]"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md"
       style={{ viewTransitionName: "tab-bar" }}
     >
-      <div className="mx-auto flex max-w-md items-center gap-3 px-4">
-        <nav
-          aria-label="التنقّل الرئيسي"
-          className="glass pointer-events-auto flex h-16 flex-1 items-stretch rounded-full p-1"
-        >
-          {TABS.map((tab, i) => {
-            const Icon = TAB_ICONS[tab.href];
-            const isActive = i === active;
-            const isOther = i !== current;
-            return (
+      <nav aria-label="التنقّل الرئيسي" className="mx-auto grid h-16 max-w-md grid-cols-5 items-stretch px-2">
+        {TABS.map((tab, i) => {
+          const Icon = TAB_ICONS[tab.href];
+          const isActive = i === active;
+          const isOther = i !== current;
+          return (
+            <Fragment key={tab.href}>
+              {i === 2 && (
+                <div className="flex items-center justify-center">
+                  <motion.button
+                    type="button"
+                    onClick={() => openExpenseForm()}
+                    aria-label="إضافة مصروف"
+                    whileTap={{ scale: 0.92 }}
+                    transition={{ type: "spring", stiffness: 600, damping: 30 }}
+                    className="tint-button flex size-12 items-center justify-center rounded-[15px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <PlusIcon className="size-6" strokeWidth={2.2} />
+                  </motion.button>
+                </div>
+              )}
               <Link
-                key={tab.href}
                 href={tab.href}
                 aria-current={i === current ? "page" : undefined}
                 transitionTypes={isOther && current >= 0 ? tabTransition(current, i) : undefined}
                 onClick={() => isOther && markPending(i)}
                 className={cn(
-                  "relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[10.5px] font-semibold outline-none",
-                  "text-foreground/70 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-ring",
-                  isActive && "text-primary",
+                  "relative flex flex-col items-center justify-center gap-1 text-[11px] font-medium outline-none",
+                  "text-muted-foreground transition-colors duration-200 focus-visible:text-foreground",
+                  isActive && "text-foreground",
                 )}
               >
                 {isActive && (
                   <motion.span
-                    layoutId="tab-pill"
-                    transition={PILL_SPRING}
-                    className="absolute inset-0 rounded-full bg-foreground/[0.07] dark:bg-white/[0.12]"
+                    layoutId="tab-mark"
+                    transition={MARK_SPRING}
+                    className="absolute top-0 h-[2px] w-7 rounded-b-full bg-primary"
                   />
                 )}
-                <Icon className="relative size-[22px]" strokeWidth={isActive ? 2.3 : 1.9} />
-                <span className="relative">{tab.label}</span>
+                <Icon className="size-[22px]" strokeWidth={isActive ? 2 : 1.6} />
+                <span>{tab.label}</span>
               </Link>
-            );
-          })}
-        </nav>
-
-        <motion.button
-          type="button"
-          onClick={() => openExpenseForm()}
-          aria-label="إضافة مصروف"
-          whileTap={{ scale: 0.88 }}
-          transition={{ type: "spring", stiffness: 600, damping: 30 }}
-          className="tint-button pointer-events-auto flex size-16 shrink-0 items-center justify-center rounded-full"
-        >
-          <PlusIcon className="size-7" strokeWidth={2.4} />
-        </motion.button>
-      </div>
+            </Fragment>
+          );
+        })}
+      </nav>
     </div>
   );
 }

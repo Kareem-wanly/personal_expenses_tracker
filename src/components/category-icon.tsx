@@ -1,5 +1,9 @@
 import { cn } from "@/lib/utils";
 
+/**
+ * The user's chosen emoji on a neutral tile. The category colour appears as
+ * a small dot (and in charts) instead of tinting the whole tile pastel.
+ */
 export function CategoryIcon({
   icon,
   color,
@@ -9,17 +13,19 @@ export function CategoryIcon({
   color: string | null;
   className?: string;
 }) {
-  const c = color ?? "#94a3b8";
   return (
     <span
       aria-hidden
       className={cn(
-        "flex size-10 shrink-0 items-center justify-center rounded-xl text-lg",
+        "relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-foreground/[0.045] text-lg ring-1 ring-inset ring-hairline",
         className,
       )}
-      style={{ backgroundColor: `${c}22`, boxShadow: `inset 0 0 0 1px ${c}33` }}
     >
-      {icon ?? "❔"}
+      {icon ?? "·"}
+      <span
+        className="absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full ring-2 ring-card"
+        style={{ backgroundColor: color ?? "var(--muted-foreground)" }}
+      />
     </span>
   );
 }

@@ -8,7 +8,17 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-system);
-  --font-heading: var(--font-system);
+  --font-heading: var(--font-display-stack);
+  --font-display: var(--font-display-stack);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-hairline: var(--hairline);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative-soft: var(--negative-soft);
+  --color-warning-soft: var(--warning-soft);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -42,53 +52,66 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Design tokens — modelled on Apple's system colours and grouped surfaces.  */
-/*  Light: grouped grey canvas with white cards. Dark: true black canvas      */
-/*  with elevated greys.                                                      */
+/*  Design tokens — "دفتر" (ledger).                                           */
+/*  Warm paper and ink, one persimmon accent, hairlines instead of shadows,   */
+/*  and Kufi type: Reem Kufi for headings/figures, Noto Kufi for text.       */
 /* -------------------------------------------------------------------------- */
 
 :root {
-  /* System UI font on Apple devices (SF Pro / SF Arabic), Plex elsewhere. */
-  --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Arabic",
-    var(--font-plex), system-ui, sans-serif;
+  --font-system: var(--font-body), -apple-system, BlinkMacSystemFont, "SF Arabic", system-ui, sans-serif;
+  --font-display-stack: var(--font-display), var(--font-body), system-ui, sans-serif;
 
-  --background: #f2f2f7;
-  --foreground: #000000;
-  --card: #ffffff;
-  --card-foreground: #000000;
-  --popover: #ffffff;
-  --popover-foreground: #000000;
-  --primary: oklch(0.56 0.15 156);
-  --primary-foreground: #ffffff;
-  --secondary: #e9e9ee;
-  --secondary-foreground: #000000;
-  --muted: #ececf0;
-  --muted-foreground: #6e6e73;
-  --accent: #e9e9ee;
-  --accent-foreground: #000000;
-  --destructive: #e5372d;
-  --border: rgb(60 60 67 / 0.13);
-  --input: rgb(60 60 67 / 0.18);
-  --ring: oklch(0.56 0.15 156 / 0.55);
-  --separator: rgb(60 60 67 / 0.17);
+  /* Paper & ink */
+  --background: #f3f0e8;
+  --foreground: #1a1915;
+  --card: #fbfaf6;
+  --card-foreground: #1a1915;
+  --popover: #fbfaf6;
+  --popover-foreground: #1a1915;
+  --ink: #1a1915;
+  --ink-foreground: #f6f3ec;
+  --hairline: #e2ddd1;
 
-  /* Apple system palette, for charts and glyph tints. */
-  --chart-1: #0a84ff;
-  --chart-2: #30b85a;
-  --chart-3: #ff9f0a;
-  --chart-4: #bf5af2;
-  --chart-5: #ff375f;
-  /* Validated categorical slots (dataviz palette, checked on --card). */
-  --series-1: #2a78d6;
-  --series-2: #eb6834;
-  --series-3: #1baf7a;
+  /* One accent, used sparingly: links, active state, the meter. */
+  --primary: #c8502b;
+  --primary-foreground: #fff8f2;
 
-  /* Materials */
-  --glass: rgb(250 250 252 / 0.72);
-  --glass-border: rgb(0 0 0 / 0.07);
-  --glass-highlight: rgb(255 255 255 / 0.85);
-  --glass-shadow: 0 14px 40px -14px rgb(0 0 0 / 0.28), 0 2px 8px -2px rgb(0 0 0 / 0.08);
-  --surface-shadow: 0 1px 2px rgb(0 0 0 / 0.03);
+  --secondary: #ebe7dc;
+  --secondary-foreground: #1a1915;
+  --muted: #ebe7dc;
+  --muted-foreground: #6f6a5f;
+  --accent: #ebe7dc;
+  --accent-foreground: #1a1915;
+  --destructive: #b3261e;
+  --border: var(--hairline);
+  --input: #d8d2c4;
+  --ring: rgb(200 80 43 / 0.45);
+  --separator: var(--hairline);
+
+  /* Meaning, not decoration */
+  --positive: #2f7a4b;
+  --negative: #b3261e;
+  --warning: #a8651a;
+  --positive-soft: rgb(47 122 75 / 0.1);
+  --negative-soft: rgb(179 38 30 / 0.08);
+  --warning-soft: rgb(168 101 26 / 0.1);
+
+  /* Charts: ink-led, accent for emphasis */
+  --chart-1: #1a1915;
+  --chart-2: #c8502b;
+  --chart-3: #8a8371;
+  --chart-4: #2f7a4b;
+  --chart-5: #a8651a;
+  --series-1: #1a1915;
+  --series-2: #c8502b;
+  --series-3: #2f7a4b;
+
+  /* Floating chrome: solid paper with a hairline, no blur glow */
+  --glass: rgb(251 250 246 / 0.94);
+  --glass-border: var(--hairline);
+  --glass-highlight: transparent;
+  --glass-shadow: 0 8px 24px -16px rgb(26 25 21 / 0.35);
+  --surface-shadow: none;
 
   --radius: 0.75rem;
   /* Tabs read right → left: "forward" moves content to the right. */
@@ -101,39 +124,51 @@
 }
 
 .dark {
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #1c1c1e;
-  --card-foreground: #ffffff;
-  --popover: #2c2c2e;
-  --popover-foreground: #ffffff;
-  --primary: oklch(0.76 0.18 152);
-  --primary-foreground: oklch(0.22 0.05 155);
-  --secondary: #2c2c2e;
-  --secondary-foreground: #ffffff;
-  --muted: #2c2c2e;
-  --muted-foreground: #98989f;
-  --accent: #2c2c2e;
-  --accent-foreground: #ffffff;
-  --destructive: #ff453a;
-  --border: rgb(255 255 255 / 0.1);
-  --input: rgb(255 255 255 / 0.15);
-  --ring: oklch(0.76 0.18 152 / 0.5);
-  --separator: rgb(84 84 88 / 0.6);
+  --background: #12110e;
+  --foreground: #ece8de;
+  --card: #1b1a16;
+  --card-foreground: #ece8de;
+  --popover: #22211c;
+  --popover-foreground: #ece8de;
+  --ink: #ece8de;
+  --ink-foreground: #12110e;
+  --hairline: #2f2d27;
 
-  --chart-1: #0a84ff;
-  --chart-2: #30d158;
-  --chart-3: #ff9f0a;
-  --chart-4: #bf5af2;
-  --chart-5: #ff375f;
-  --series-1: #3987e5;
-  --series-2: #d95926;
-  --series-3: #199e70;
+  --primary: #ec7a52;
+  --primary-foreground: #1b120d;
 
-  --glass: rgb(34 34 36 / 0.66);
-  --glass-border: rgb(255 255 255 / 0.09);
-  --glass-highlight: rgb(255 255 255 / 0.1);
-  --glass-shadow: 0 14px 40px -14px rgb(0 0 0 / 0.8), 0 2px 8px -2px rgb(0 0 0 / 0.4);
+  --secondary: #26241f;
+  --secondary-foreground: #ece8de;
+  --muted: #26241f;
+  --muted-foreground: #9a9486;
+  --accent: #26241f;
+  --accent-foreground: #ece8de;
+  --destructive: #f2665a;
+  --border: var(--hairline);
+  --input: #3a3830;
+  --ring: rgb(236 122 82 / 0.45);
+  --separator: var(--hairline);
+
+  --positive: #6cc08a;
+  --negative: #f2665a;
+  --warning: #e3a148;
+  --positive-soft: rgb(108 192 138 / 0.12);
+  --negative-soft: rgb(242 102 90 / 0.12);
+  --warning-soft: rgb(227 161 72 / 0.12);
+
+  --chart-1: #ece8de;
+  --chart-2: #ec7a52;
+  --chart-3: #7d7769;
+  --chart-4: #6cc08a;
+  --chart-5: #e3a148;
+  --series-1: #ece8de;
+  --series-2: #ec7a52;
+  --series-3: #6cc08a;
+
+  --glass: rgb(27 26 22 / 0.94);
+  --glass-border: var(--hairline);
+  --glass-highlight: transparent;
+  --glass-shadow: 0 8px 24px -14px rgb(0 0 0 / 0.7);
   --surface-shadow: none;
 }
 
@@ -156,6 +191,12 @@
   }
   ::selection {
     background: color-mix(in oklab, var(--primary) 28%, transparent);
+  }
+  /* Display face for headings and every figure the app shows big. */
+  h1,
+  h2,
+  .font-display {
+    font-family: var(--font-display-stack);
   }
   input[type="search"]::-webkit-search-cancel-button {
     -webkit-appearance: none;
@@ -188,24 +229,47 @@
   box-shadow: 0 0.5px 0 0 var(--separator);
 }
 
-/** Grouped content card. */
+/** Content card: paper on paper, separated by a hairline — no shadow. */
 @utility surface {
   background-color: var(--card);
-  border-radius: 22px;
-  box-shadow: var(--surface-shadow);
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
-/** Filled tint button with a soft coloured glow. */
+/** Primary action: solid ink, no gradient, no glow. */
 @utility tint-button {
-  color: var(--primary-foreground);
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklab, var(--primary) 82%, white),
-    var(--primary)
-  );
-  box-shadow:
-    0 12px 28px -10px color-mix(in oklab, var(--primary) 75%, transparent),
-    inset 0 1px 0 0 rgb(255 255 255 / 0.3);
+  color: var(--ink-foreground);
+  background-color: var(--ink);
+  border-radius: 14px;
+  transition: opacity 150ms ease;
+  &:active {
+    opacity: 0.85;
+  }
+}
+
+/** Small section label with a rule that runs to the end of the line. */
+@utility section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  &::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--hairline);
+  }
+}
+
+/** Dotted leader between a label and its value, like a printed ledger. */
+@utility leader {
+  flex: 1;
+  min-width: 1rem;
+  align-self: end;
+  margin-bottom: 0.35em;
+  border-bottom: 1.5px dotted color-mix(in oklab, var(--muted-foreground) 55%, transparent);
 }
 
 /** Gentle press feedback for tappable cards and rows. */

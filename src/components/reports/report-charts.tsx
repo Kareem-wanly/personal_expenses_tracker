@@ -17,7 +17,7 @@ import { formatMoney } from "@/lib/money";
 import type { CategoryTotal } from "@/server/queries";
 
 const barConfig = {
-  total: { label: "المصروف", color: "var(--primary)" },
+  total: { label: "المصروف", color: "var(--ink)" },
 } satisfies ChartConfig;
 
 /** Recessive axes: small muted ink, no lines. */
@@ -167,8 +167,9 @@ export function DailyBars({
             {daily.map((d) => (
               <Cell
                 key={d.date}
-                fill="var(--color-total)"
-                fillOpacity={today && d.date > today ? 0 : today && d.date !== today ? 0.75 : 1}
+                // Ink bars; today in the accent so "where am I" reads at a glance.
+                fill={d.date === today ? "var(--primary)" : "var(--color-total)"}
+                fillOpacity={today && d.date > today ? 0 : today && d.date !== today ? 0.8 : 1}
               />
             ))}
           </Bar>

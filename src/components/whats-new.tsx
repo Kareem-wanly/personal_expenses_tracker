@@ -58,17 +58,18 @@ export function WhatsNew() {
 
   return (
     <Drawer open={open} onOpenChange={(next) => (next ? setOpenState(true) : close())} showSwipeHandle>
-      <DrawerContent className="mx-auto max-w-2xl border-t-0 bg-background data-[swipe-direction=down]:rounded-t-[28px] dark:bg-[#1c1c1e] dark:[--card:#2c2c2e]">
+      <DrawerContent className="mx-auto max-w-2xl border-t-0 bg-background data-[swipe-direction=down]:rounded-t-[22px]">
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-4 pt-4">
-            <div className="flex flex-col items-center text-center">
-              <span className="flex size-16 items-center justify-center rounded-[20px] bg-primary/15 text-[32px]">🎉</span>
-              <DrawerTitle className="mt-3 text-[24px] font-bold">ما الجديد</DrawerTitle>
+            <div>
+              <p className="text-[13px] font-medium text-muted-foreground tabular">الإصدار {release.version}</p>
+              <DrawerTitle className="mt-1 font-display text-[28px] font-semibold leading-tight">ما الجديد</DrawerTitle>
               <DrawerDescription className="mt-1 text-[15px] text-muted-foreground">
                 {release.title}
               </DrawerDescription>
+              <div className="mt-4 h-px bg-hairline" />
             </div>
-            <ul className="mt-6 space-y-5">
+            <ol className="mt-5 space-y-5">
               {release.items.map((item, i) => (
                 <motion.li
                   key={item.title}
@@ -77,8 +78,8 @@ export function WhatsNew() {
                   transition={{ delay: 0.08 * i, duration: 0.35 }}
                   className="flex gap-4"
                 >
-                  <span aria-hidden className="mt-0.5 text-[28px] leading-none">
-                    {item.icon}
+                  <span aria-hidden className="mt-0.5 w-6 shrink-0 font-display text-[15px] font-semibold text-primary tabular">
+                    {String(i + 1).padStart(2, "0")}
                   </span>
                   <div className="min-w-0">
                     <p className="text-[16px] font-semibold">{item.title}</p>
@@ -86,7 +87,7 @@ export function WhatsNew() {
                   </div>
                 </motion.li>
               ))}
-            </ul>
+            </ol>
           </div>
           <div className="shrink-0 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
             <motion.button
@@ -94,7 +95,7 @@ export function WhatsNew() {
               onClick={close}
               whileTap={{ scale: 0.97 }}
               transition={SPRING}
-              className="tint-button flex h-[52px] w-full items-center justify-center rounded-full text-[17px] font-semibold"
+              className="tint-button flex h-[52px] w-full items-center justify-center text-[17px] font-semibold"
             >
               متابعة
             </motion.button>
@@ -111,7 +112,7 @@ export function WhatsNewRow() {
     <Group>
       <RowButton
         onClick={openWhatsNew}
-        leading={<RowIcon icon={GiftIcon} tint="#ff2d55" />}
+        leading={<RowIcon icon={GiftIcon} />}
         title="ما الجديد"
         subtitle={`الإصدار ${LATEST_RELEASE.version} · ${LATEST_RELEASE.title}`}
         chevron

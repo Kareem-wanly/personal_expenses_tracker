@@ -234,6 +234,8 @@ export async function getDashboardData(today: string) {
     dailyAverage: Math.round(monthTotal / dayOfMonth),
     projected: Math.round((monthTotal / dayOfMonth) * totalDays),
     daysLeft: totalDays - dayOfMonth,
+    /** Share of the month elapsed (for the budget pace notch). */
+    pace: dayOfMonth / totalDays,
   };
 }
 

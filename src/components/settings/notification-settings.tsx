@@ -39,33 +39,28 @@ const PREF_ITEMS: {
   title: string;
   description: string;
   icon: LucideIcon;
-  tint: string;
 }[] = [
   {
     key: "notifyBudget",
     icon: TriangleAlertIcon,
-    tint: "#ff9f0a",
     title: "تنبيهات الميزانية",
     description: "عند الوصول إلى 80% من الميزانية وعند تجاوزها.",
   },
   {
     key: "notifyDailyReminder",
     icon: MoonStarIcon,
-    tint: "#5e5ce6",
     title: "تذكير يومي مسائي",
     description: "فقط إذا لم تسجّل أي مصروف في ذلك اليوم.",
   },
   {
     key: "notifyMonthlySummary",
     icon: CalendarClockIcon,
-    tint: "#30b0c7",
     title: "الملخص الشهري",
     description: "في أول كل شهر: كم صرفت ومقارنة بالشهر السابق.",
   },
   {
     key: "notifyRecurring",
     icon: RepeatIcon,
-    tint: "#34c759",
     title: "المصاريف المتكررة",
     description: "تنبيه مساء اليوم السابق لإضافة اشتراك أو فاتورة متكررة.",
   },
@@ -145,7 +140,7 @@ export function NotificationSettings({ prefs: initialPrefs }: { prefs: Prefs }) 
     >
       {ready && (
         <Row
-          leading={<RowIcon icon={BellIcon} tint="#ff3b30" />}
+          leading={<RowIcon icon={BellIcon} />}
           title="هذا الجهاز"
           subtitle={subscription ? "الإشعارات مفعّلة" : "الإشعارات متوقفة"}
           trailing={
@@ -164,7 +159,7 @@ export function NotificationSettings({ prefs: initialPrefs }: { prefs: Prefs }) 
       {PREF_ITEMS.map((item) => (
         <Row
           key={item.key}
-          leading={<RowIcon icon={item.icon} tint={item.tint} />}
+          leading={<RowIcon icon={item.icon} />}
           title={<label htmlFor={item.key}>{item.title}</label>}
           subtitle={item.description}
           trailing={
@@ -182,7 +177,7 @@ export function NotificationSettings({ prefs: initialPrefs }: { prefs: Prefs }) 
           onClick={test}
           disabled={pending}
           className="text-primary"
-          leading={<RowIcon icon={SendIcon} tint="#0a84ff" />}
+          leading={<RowIcon icon={SendIcon} />}
           title="إرسال إشعار تجريبي"
         />
       )}

@@ -11,7 +11,6 @@ export type InsightTone = "good" | "warn" | "bad" | "info";
 
 export type Insight = {
   id: string;
-  icon: string;
   tone: InsightTone;
   title: string;
   body: string;
@@ -65,7 +64,6 @@ export function buildInsights(i: InsightInput): Insight[] {
     if (i.total >= budget) {
       out.push({
         id: "budget-over",
-        icon: "🚨",
         tone: "bad",
         title: "تجاوزت ميزانية الشهر",
         body: `صرفت ${m(i.total)} من أصل ${m(budget)}${i.isCurrent && daysLeft > 0 ? ` وما زال ${daysLeft} يوم` : ""}.`,
@@ -74,7 +72,6 @@ export function buildInsights(i: InsightInput): Insight[] {
     } else if (i.isCurrent && projected > budget * 1.02) {
       out.push({
         id: "budget-pace",
-        icon: "⚠️",
         tone: "warn",
         title: "بهذا المعدّل ستتجاوز ميزانيتك",
         body: `المتوقّع ${m(projected)} بنهاية الشهر. لتبقى ضمنها لا تتجاوز ${m((budget - i.total) / Math.max(daysLeft, 1))} يومياً.`,
@@ -83,7 +80,6 @@ export function buildInsights(i: InsightInput): Insight[] {
     } else if (i.isCurrent && i.elapsedDays >= 5 && projected <= budget * 0.9) {
       out.push({
         id: "budget-good",
-        icon: "✅",
         tone: "good",
         title: "أنت على المسار الصحيح",
         body: `بهذا المعدّل سيتبقّى حوالي ${m(budget - projected)} من ميزانيتك.`,
@@ -98,7 +94,6 @@ export function buildInsights(i: InsightInput): Insight[] {
     if (rate < 0) {
       out.push({
         id: "savings-negative",
-        icon: "📉",
         tone: "bad",
         title: "مصاريفك تجاوزت دخلك",
         body: `صرفت ${m(i.total)} مقابل دخل ${m(i.income)} — أي ${m(i.total - i.income)} زيادة هذا الشهر.`,
@@ -107,7 +102,6 @@ export function buildInsights(i: InsightInput): Insight[] {
     } else {
       out.push({
         id: "savings-rate",
-        icon: rate >= 0.2 ? "💪" : "💰",
         tone: rate >= 0.2 ? "good" : "info",
         title: `وفّرت ${formatPercent(rate)} من دخلك`,
         body:
@@ -129,7 +123,6 @@ export function buildInsights(i: InsightInput): Insight[] {
     if (atRisk) {
       out.push({
         id: `category-pace-${atRisk.c.id}`,
-        icon: atRisk.c.icon,
         tone: "warn",
         title: `«${atRisk.c.name}» في طريقه لتجاوز ميزانيته`,
         body: `صرفت ${m(atRisk.c.total)} من ${m(atRisk.c.budget!)}، والمتوقّع ${m(atRisk.projected)} بنهاية الشهر.`,
@@ -148,7 +141,6 @@ export function buildInsights(i: InsightInput): Insight[] {
   if (up) {
     out.push({
       id: `category-up-${up.c.id}`,
-      icon: up.c.icon,
       tone: "warn",
       // +40% reads well as a percentage; ×13 doesn't ("أكثر بـ 1,225%").
       title:
@@ -163,7 +155,6 @@ export function buildInsights(i: InsightInput): Insight[] {
   if (down) {
     out.push({
       id: `category-down-${down.c.id}`,
-      icon: down.c.icon,
       tone: "good",
       title: `خفّضت «${down.c.name}» بـ ${formatPercent(Math.abs(down.ratio))}`,
       body: `${m(down.c.total)} مقابل ${m(down.c.prevTotal)} في نفس الفترة من الشهر الماضي. أحسنت!`,
@@ -176,7 +167,6 @@ export function buildInsights(i: InsightInput): Insight[] {
   if (habit) {
     out.push({
       id: `habit-${habit.label}`,
-      icon: "🔂",
       tone: "info",
       title: `«${habit.label}» تكرّر ${countTimes(habit.count)} هذا الشهر`,
       body: `بمجموع ${m(habit.total)}. تخفيفه للنصف يوفّر حوالي ${m(habit.total / 2)} شهرياً.`,
@@ -189,7 +179,6 @@ export function buildInsights(i: InsightInput): Insight[] {
     const share = i.recurringMonthly / Math.max(i.isCurrent ? (i.total / Math.max(i.elapsedDays, 1)) * i.totalDays : i.total, 1);
     out.push({
       id: "recurring-share",
-      icon: "🔁",
       tone: "info",
       title: `التزامات ثابتة: ${m(i.recurringMonthly)} شهرياً`,
       body: `المصاريف المتكررة تشكّل حوالي ${formatPercent(Math.min(share, 1))} من مصروفك الشهري.`,
@@ -206,7 +195,6 @@ export function buildInsights(i: InsightInput): Insight[] {
     if (othersAvg > 0 && avgs[top] >= othersAvg * 1.3) {
       out.push({
         id: "weekday",
-        icon: "📅",
         tone: "info",
         title: `أكثر يوم تصرف فيه: ${WEEKDAYS[top]}`,
         body: `متوسط ${m(avgs[top])} مقابل ${m(othersAvg)} لباقي الأيام (آخر 12 أسبوعاً).`,
@@ -219,7 +207,6 @@ export function buildInsights(i: InsightInput): Insight[] {
   if (i.isCurrent && i.noSpendDays >= 3) {
     out.push({
       id: "no-spend",
-      icon: "🌱",
       tone: "good",
       title: `${i.noSpendDays} أيام بدون مصاريف هذا الشهر`,
       body: "كل يوم بدون صرف يقرّبك من هدفك. استمر!",
@@ -231,7 +218,6 @@ export function buildInsights(i: InsightInput): Insight[] {
   if (i.largest && i.averageExpense > 0 && i.largest.amount >= i.averageExpense * 5 && i.largest.amount >= i.total * 0.1) {
     out.push({
       id: "largest",
-      icon: "🔎",
       tone: "info",
       title: `أكبر مصروف: ${i.largest.label}`,
       body: `${m(i.largest.amount)} — يعادل ${formatPercent(i.largest.amount / i.total)} من مصروف الشهر.`,

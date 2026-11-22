@@ -39,7 +39,7 @@ export function NotificationPrompt({ hasExpenses }: { hasExpenses: boolean }) {
       if (res.ok) {
         setSubscription(res.subscription);
         setPermission("granted");
-        toast.success("رائع! ستصلك التنبيهات المهمة فقط 🔔");
+        toast.success("تم تفعيل التنبيهات. سنرسل المهم فقط.");
       } else {
         if (res.permission) setPermission(res.permission);
         // "Not now" in the browser dialog: back off like a snooze.
@@ -64,16 +64,14 @@ export function NotificationPrompt({ hasExpenses }: { hasExpenses: boolean }) {
       </button>
 
       <div className="flex gap-3 pe-6">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-[11px] bg-[#ff3b30] text-white">
-          <BellRingIcon className="size-5" />
-        </span>
+        <BellRingIcon aria-hidden className="mt-0.5 size-5 shrink-0 text-foreground/70" strokeWidth={1.75} />
         <div className="min-w-0">
           <h2 id="notify-prompt-title" className="text-[16px] font-semibold">
-            خلّيك على اطلاع بميزانيتك
+            تنبيهات الميزانية
           </h2>
           <p className="mt-0.5 text-[14px] text-muted-foreground">
-            ننبّهك عند الوصول إلى 80% من ميزانيتك، ونذكّرك مساءً إذا نسيت تسجيل
-            مصاريفك. بدون إزعاج.
+            نخبرك عند الوصول إلى 80% من ميزانيتك، ونذكّرك مساءً إذا لم تسجّل
+            مصاريف اليوم. لا شيء غير ذلك.
           </p>
         </div>
       </div>
@@ -83,7 +81,7 @@ export function NotificationPrompt({ hasExpenses }: { hasExpenses: boolean }) {
           type="button"
           onClick={enable}
           disabled={pending}
-          className="tint-button flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full text-[15px] font-semibold active:scale-[0.97] disabled:opacity-70"
+          className="tint-button flex h-11 flex-1 items-center justify-center gap-1.5 text-[15px] font-semibold active:scale-[0.97] disabled:opacity-70"
         >
           {pending ? <Loader2Icon className="size-[18px] animate-spin" /> : <BellRingIcon className="size-[18px]" />}
           فعّل التنبيهات
@@ -92,7 +90,7 @@ export function NotificationPrompt({ hasExpenses }: { hasExpenses: boolean }) {
           type="button"
           onClick={snooze}
           disabled={pending}
-          className="h-11 rounded-full px-4 text-[15px] font-medium text-primary active:opacity-60"
+          className="h-11 px-4 text-[15px] font-medium text-muted-foreground active:opacity-60"
         >
           لاحقاً
         </button>

@@ -16,7 +16,7 @@ export function InstallApp() {
     return (
       <Group header="التطبيق">
         <Row
-          leading={<RowIcon icon={SmartphoneIcon} tint="#34c759" />}
+          leading={<RowIcon icon={SmartphoneIcon} />}
           title="مثبّت على هذا الجهاز"
           trailing={<CheckIcon className="size-5 text-primary" strokeWidth={2.6} />}
         />
@@ -29,10 +29,10 @@ export function InstallApp() {
       <Group header="التطبيق" footer="يفتح بشاشة كاملة مثل أي تطبيق، ويعمل بدون إنترنت.">
         <RowButton
           onClick={async () => {
-            if (await promptInstall()) toast.success("تم تثبيت التطبيق 🎉");
+            if (await promptInstall()) toast.success("تم تثبيت التطبيق");
           }}
           className="text-primary"
-          leading={<RowIcon icon={DownloadIcon} tint="#0a84ff" />}
+          leading={<RowIcon icon={DownloadIcon} />}
           title="تثبيت التطبيق على الجهاز"
         />
       </Group>
@@ -52,7 +52,7 @@ export function InstallApp() {
         )
       }
     >
-      <Row leading={<RowIcon icon={SmartphoneIcon} tint="#0a84ff" />} title="ثبّت التطبيق على شاشتك الرئيسية" />
+      <Row leading={<RowIcon icon={SmartphoneIcon} />} title="ثبّت التطبيق على شاشتك الرئيسية" />
     </Group>
   );
 }

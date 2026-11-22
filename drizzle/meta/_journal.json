@@ -29,6 +29,13 @@
       "when": 1795194165401,
       "tag": "0003_income",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795331201012,
+      "tag": "0004_category_palette",
+      "breakpoints": true
     }
   ]
 }

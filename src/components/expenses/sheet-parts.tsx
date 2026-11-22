@@ -8,25 +8,20 @@ import { type EntryKind, setEntryKind } from "./expense-form-store";
 
 export const SPRING = { type: "spring", stiffness: 520, damping: 30 } as const;
 
-/** Settings-style row: coloured glyph tile, label, trailing control. */
+/** Settings-style row: plain line icon, label, trailing control. */
 export function SheetRow({
   icon: Icon,
-  tint,
   label,
   children,
 }: {
   icon: LucideIcon;
-  tint: string;
   label?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex items-center gap-3 ps-4">
-      <span
-        className="flex size-7 shrink-0 items-center justify-center rounded-[8px] text-white"
-        style={{ backgroundColor: tint }}
-      >
-        <Icon className="size-4" strokeWidth={2.3} />
+      <span aria-hidden className="flex size-6 shrink-0 items-center justify-center text-foreground/70">
+        <Icon className="size-[18px]" strokeWidth={1.75} />
       </span>
       <div className="list-row-body flex min-h-12 min-w-0 flex-1 items-center justify-between gap-3 py-1.5 pe-4">
         {label && <span className="text-[16px]">{label}</span>}

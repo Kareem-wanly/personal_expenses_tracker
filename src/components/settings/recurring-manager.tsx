@@ -102,7 +102,7 @@ export function RecurringManager({
       </Group>
 
       <Drawer open={open} onOpenChange={setOpen} showSwipeHandle>
-        <DrawerContent className="mx-auto max-w-2xl border-t-0 bg-background data-[swipe-direction=down]:rounded-t-[28px] dark:bg-[#1c1c1e] dark:[--card:#2c2c2e]">
+        <DrawerContent className="mx-auto max-w-2xl border-t-0 bg-background data-[swipe-direction=down]:rounded-t-[22px]">
           {editing && (
             <RecurringForm
               key={formKey}
@@ -301,7 +301,7 @@ function RecurringForm({
           disabled={pending}
           whileTap={{ scale: 0.97 }}
           transition={SPRING}
-          className="tint-button flex h-[52px] w-full items-center justify-center gap-2 rounded-full text-[17px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
+          className="tint-button flex h-[52px] w-full items-center justify-center gap-2 text-[17px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-70"
         >
           {pending ? <Loader2Icon className="size-5 animate-spin" /> : <CheckIcon className="size-5" strokeWidth={2.6} />}
           حفظ
