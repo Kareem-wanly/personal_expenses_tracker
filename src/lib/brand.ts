@@ -65,7 +65,7 @@ export function splashInnerHtml() {
 
 /**
  * Splash styles. `--splash-font` is set by the host: the app's display
- * face (Reem Kufi) in the layout, an @font-face of the same face in the
+ * face (El Messiri) in the layout, an @font-face of the same face in the
  * generator.
  */
 export const SPLASH_CSS = `

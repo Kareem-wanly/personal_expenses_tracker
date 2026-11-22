@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Kufi_Arabic, Reem_Kufi } from "next/font/google";
+import { El_Messiri, Noto_Naskh_Arabic } from "next/font/google";
 
 import { Providers } from "@/components/providers";
 import {
@@ -14,16 +14,16 @@ import {
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants";
 import "./globals.css";
 
-/** Body text: a Kufi workhorse that stays readable at small sizes. */
-const font = Noto_Kufi_Arabic({
+/** Body text: a classic Naskh that stays readable at small sizes. */
+const font = Noto_Naskh_Arabic({
   variable: "--font-body",
   subsets: ["arabic", "latin"],
   weight: "variable",
   display: "swap",
 });
 
-/** Display: geometric Kufi for headings and every big figure (see globals.css). */
-const display = Reem_Kufi({
+/** Display: El Messiri for headings and every big figure (see globals.css). */
+const display = El_Messiri({
   variable: "--font-display",
   subsets: ["arabic", "latin"],
   weight: "variable",

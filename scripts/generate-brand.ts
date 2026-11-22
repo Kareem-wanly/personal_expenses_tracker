@@ -88,7 +88,7 @@ async function launchImages() {
     console.warn("⚠ Playwright not found — skipping launch images (npm i -D playwright).");
     return;
   }
-  const font = await readFile("node_modules/@fontsource/reem-kufi/files/reem-kufi-arabic-600-normal.woff2");
+  const font = await readFile("node_modules/@fontsource/el-messiri/files/el-messiri-arabic-600-normal.woff2");
   const html = `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><style>
 @font-face{font-family:SplashFont;font-weight:600;src:url(data:font/woff2;base64,${font.toString("base64")}) format("woff2")}
 html,body{margin:0;height:100%}:root{--splash-font:SplashFont}${SPLASH_CSS}
