@@ -192,6 +192,13 @@
   ::selection {
     background: color-mix(in oklab, var(--primary) 28%, transparent);
   }
+  /* App lock: hide (and make unfocusable) everything but the lock screen. */
+  html[data-locked] {
+    overflow: hidden;
+  }
+  html[data-locked] body > :not(#app-lock) {
+    visibility: hidden !important;
+  }
   /* Display face for headings and every figure the app shows big. */
   h1,
   h2,

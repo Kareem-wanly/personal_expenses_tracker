@@ -4,10 +4,12 @@ import { FingerprintIcon, KeyRoundIcon, Loader2Icon, PlusIcon, Trash2Icon } from
 import { useCallback, useEffect, useState, useSyncExternalStore, useTransition } from "react";
 import { toast } from "sonner";
 
+import { AppLockSettings } from "@/components/settings/app-lock-settings";
 import { Group, Row, RowButton, RowIcon } from "@/components/ui/grouped-list";
+import { readLock, writeLock } from "@/lib/app-lock";
 import { authClient } from "@/lib/auth-client";
 
-type PasskeyItem = { id: string; name?: string | null; createdAt?: string | Date | null };
+type PasskeyItem = { id: string; credentialID: string; name?: string | null; createdAt?: string | Date | null };
 
 const noop = () => () => {};
 
@@ -29,7 +31,7 @@ const dateFmt = new Intl.DateTimeFormat("ar-u-nu-latn", { day: "numeric", month:
  * password. Keys live in the device's keychain; the server only stores the
  * public half.
  */
-export function SecuritySettings() {
+export function SecuritySettings({ userId }: { userId: string }) {
   const supported = useSyncExternalStore(noop, () => typeof window.PublicKeyCredential !== "undefined", () => false);
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   const [keys, setKeys] = useState<PasskeyItem[] | null>(null);
@@ -70,6 +72,12 @@ export function SecuritySettings() {
         toast.error("تعذّر الحذف");
         return;
       }
+      // The app lock can't use a deleted passkey for Face ID any more.
+      const lock = readLock();
+      const removed = keys?.find((k) => k.id === id);
+      if (lock && removed && lock.credentialId === removed.credentialID) {
+        writeLock({ ...lock, credentialId: null });
+      }
       toast.success("تم حذف مفتاح المرور");
       await load();
     });
@@ -78,51 +86,54 @@ export function SecuritySettings() {
   if (!mounted) return null;
 
   return (
-    <Group
-      header="الأمان"
-      footer={
-        supported
-          ? "مفتاح المرور يحفظه جهازك ويُفتح بالبصمة أو Face ID. لا نخزّن بصمتك؛ يصلنا مفتاح عام فقط."
-          : "هذا المتصفح لا يدعم مفاتيح المرور."
-      }
-    >
-      {keys === null ? (
-        <Row leading={<RowIcon icon={KeyRoundIcon} />} title={<span className="text-muted-foreground">…</span>} />
-      ) : (
-        keys.map((k) => (
-          <Row
-            key={k.id}
-            leading={<RowIcon icon={KeyRoundIcon} />}
-            title={k.name || "مفتاح مرور"}
-            subtitle={k.createdAt ? `أُضيف في ${dateFmt.format(new Date(k.createdAt))}` : undefined}
-            trailing={
-              <button
-                type="button"
-                onClick={() => remove(k.id)}
-                disabled={pending}
-                aria-label={`حذف ${k.name || "مفتاح المرور"}`}
-                className="flex size-9 items-center justify-center rounded-full text-destructive active:bg-foreground/[0.06] disabled:opacity-50"
-              >
-                <Trash2Icon className="size-[18px]" />
-              </button>
+    <>
+      <Group
+        header="الأمان"
+        footer={
+          supported
+            ? "مفتاح المرور يحفظه جهازك ويُفتح بالبصمة أو Face ID. لا نخزّن بصمتك؛ يصلنا مفتاح عام فقط."
+            : "هذا المتصفح لا يدعم مفاتيح المرور."
+        }
+      >
+        {keys === null ? (
+          <Row leading={<RowIcon icon={KeyRoundIcon} />} title={<span className="text-muted-foreground">…</span>} />
+        ) : (
+          keys.map((k) => (
+            <Row
+              key={k.id}
+              leading={<RowIcon icon={KeyRoundIcon} />}
+              title={k.name || "مفتاح مرور"}
+              subtitle={k.createdAt ? `أُضيف في ${dateFmt.format(new Date(k.createdAt))}` : undefined}
+              trailing={
+                <button
+                  type="button"
+                  onClick={() => remove(k.id)}
+                  disabled={pending}
+                  aria-label={`حذف ${k.name || "مفتاح المرور"}`}
+                  className="flex size-9 items-center justify-center rounded-full text-destructive active:bg-foreground/[0.06] disabled:opacity-50"
+                >
+                  <Trash2Icon className="size-[18px]" />
+                </button>
+              }
+            />
+          ))
+        )}
+        {supported && (
+          <RowButton
+            onClick={add}
+            disabled={pending}
+            className="text-primary"
+            leading={<RowIcon icon={keys && keys.length ? PlusIcon : FingerprintIcon} />}
+            title={
+              <span className="flex items-center gap-2">
+                {keys && keys.length ? "إضافة مفتاح لجهاز آخر" : "تفعيل الدخول بالبصمة أو Face ID"}
+                {pending && <Loader2Icon className="size-4 animate-spin" />}
+              </span>
             }
           />
-        ))
-      )}
-      {supported && (
-        <RowButton
-          onClick={add}
-          disabled={pending}
-          className="text-primary"
-          leading={<RowIcon icon={keys && keys.length ? PlusIcon : FingerprintIcon} />}
-          title={
-            <span className="flex items-center gap-2">
-              {keys && keys.length ? "إضافة مفتاح لجهاز آخر" : "تفعيل الدخول بالبصمة أو Face ID"}
-              {pending && <Loader2Icon className="size-4 animate-spin" />}
-            </span>
-          }
-        />
-      )}
-    </Group>
+        )}
+      </Group>
+      <AppLockSettings userId={userId} passkeyIds={keys ? keys.map((k) => k.credentialID) : null} />
+    </>
   );
 }

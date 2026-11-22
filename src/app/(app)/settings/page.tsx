@@ -54,8 +54,13 @@ export default function SettingsPage() {
           <ThemeSwitcher />
         </Reveal>
 
+        <Suspense fallback={<Skeleton className="h-40 rounded-[22px]" />}>
+          <Reveal index={4} className="space-y-7">
+            <Security />
+          </Reveal>
+        </Suspense>
+
         <Reveal index={4} className="space-y-7">
-          <SecuritySettings />
           <WhatsNewRow />
           <InstallApp />
           <DataSettings />
@@ -135,4 +140,9 @@ async function Recurring() {
 async function Categories() {
   const [user, categories] = await Promise.all([requireUser(), getCategoriesWithUsage()]);
   return <CategoryManager categories={categories} currency={user.currency} />;
+}
+
+async function Security() {
+  const user = await requireUser();
+  return <SecuritySettings userId={user.id} />;
 }
