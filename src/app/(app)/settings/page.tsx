@@ -6,9 +6,11 @@ import { PageHeader } from "@/components/layout/page-header";
 import { TabScreen } from "@/components/layout/tab-screen";
 import { Reveal } from "@/components/motion/reveal";
 import { CategoryManager } from "@/components/settings/category-manager";
+import { DataSettings, DeleteAccount } from "@/components/settings/data-settings";
 import { InstallApp } from "@/components/settings/install-app";
 import { NotificationSettings } from "@/components/settings/notification-settings";
 import { RecurringManager } from "@/components/settings/recurring-manager";
+import { SecuritySettings } from "@/components/settings/security-settings";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { ThemeSwitcher } from "@/components/settings/theme-switcher";
 import { WhatsNewRow } from "@/components/whats-new";
@@ -53,8 +55,10 @@ export default function SettingsPage() {
         </Reveal>
 
         <Reveal index={4} className="space-y-7">
+          <SecuritySettings />
           <WhatsNewRow />
           <InstallApp />
+          <DataSettings />
         </Reveal>
 
         <Reveal index={5}>
@@ -73,6 +77,9 @@ export default function SettingsPage() {
               />
             </Group>
           </form>
+          <div className="mt-7">
+            <DeleteAccount />
+          </div>
           <p className="mt-6 text-center text-[12px] text-muted-foreground">{APP_NAME}</p>
         </Reveal>
       </div>

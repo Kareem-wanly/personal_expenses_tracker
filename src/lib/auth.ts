@@ -3,9 +3,11 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { passkey } from "@better-auth/passkey";
 
 import { db, schema } from "@/db";
-import { DEFAULT_CATEGORIES } from "@/lib/constants";
+import { purgeUserData } from "@/lib/account-data";
+import { APP_NAME, DEFAULT_CATEGORIES } from "@/lib/constants";
 import { env } from "@/lib/env";
 
 /** Vercel exposes the deployment domains (without protocol) at runtime. */
@@ -30,6 +32,7 @@ export const auth = betterAuth({
       session: schema.session,
       account: schema.account,
       verification: schema.verification,
+      passkey: schema.passkey,
     },
   }),
   emailAndPassword: {
@@ -47,6 +50,15 @@ export const auth = betterAuth({
     additionalFields: {
       currency: { type: "string", defaultValue: "USD", input: false },
       monthlyBudget: { type: "number", required: false, input: false },
+    },
+    // Self-service account deletion (required by Google Play / App Store).
+    // The endpoint re-checks the password; we remove the app's own data
+    // first, then Better Auth deletes sessions, accounts and the user.
+    deleteUser: {
+      enabled: true,
+      beforeDelete: async (user) => {
+        await purgeUserData(user.id);
+      },
     },
   },
   databaseHooks: {
@@ -68,8 +80,13 @@ export const auth = betterAuth({
     },
   },
   rateLimit: { enabled: true, window: 60, max: 30 },
-  // Must stay last so cookies set inside Server Actions are forwarded.
-  plugins: [nextCookies()],
+  plugins: [
+    // Face ID / fingerprint sign-in. rpID and origin default to baseURL's
+    // host, so passkeys belong to the production domain (and localhost).
+    passkey({ rpName: APP_NAME }),
+    // Must stay last so cookies set inside Server Actions are forwarded.
+    nextCookies(),
+  ],
 });
 
 export type Session = typeof auth.$Infer.Session;

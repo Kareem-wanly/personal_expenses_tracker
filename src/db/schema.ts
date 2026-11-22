@@ -99,6 +99,27 @@ export const verification = sqliteTable(
   (t) => [index("verification_identifier_idx").on(t.identifier)],
 );
 
+/** WebAuthn passkeys (Face ID / fingerprint sign-in) — Better Auth plugin. */
+export const passkey = sqliteTable(
+  "passkey",
+  {
+    id: text("id").primaryKey(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: integer("backed_up", { mode: "boolean" }).notNull(),
+    transports: text("transports"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }),
+    aaguid: text("aaguid"),
+  },
+  (t) => [index("passkey_user_idx").on(t.userId), index("passkey_credential_idx").on(t.credentialID)],
+);
+
 /* -------------------------------------------------------------------------- */
 /*                               Domain tables                                */
 /* -------------------------------------------------------------------------- */
@@ -129,6 +150,13 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const FREQUENCIES = ["weekly", "monthly", "yearly"] as const;
 export type Frequency = (typeof FREQUENCIES)[number];
 
+export const INCOME_SOURCES = ["salary", "freelance", "business", "gift", "investment", "other"] as const;
+export type IncomeSource = (typeof INCOME_SOURCES)[number];
+
+/** What a recurring rule creates: an expense (rent, Netflix) or income (salary). */
+export const RECURRING_KINDS = ["expense", "income"] as const;
+export type RecurringKind = (typeof RECURRING_KINDS)[number];
+
 /**
  * A rule that creates an expense on a schedule (rent, subscriptions, bills).
  * `startDate` anchors the day (e.g. the 31st → last day of shorter months);
@@ -155,6 +183,9 @@ export const recurringExpense = sqliteTable(
     startDate: text("start_date").notNull(),
     nextDate: text("next_date").notNull(),
     active: integer("active", { mode: "boolean" }).notNull().default(true),
+    kind: text("kind", { enum: RECURRING_KINDS }).notNull().default("expense"),
+    /** Income rules only: where the money comes from. */
+    source: text("source", { enum: INCOME_SOURCES }),
     ...timestamps,
   },
   (t) => [
@@ -197,8 +228,6 @@ export const expense = sqliteTable(
   ],
 );
 
-export const INCOME_SOURCES = ["salary", "freelance", "business", "gift", "investment", "other"] as const;
-export type IncomeSource = (typeof INCOME_SOURCES)[number];
 
 /** Money coming in (salary, freelance…), so the app can show net balance. */
 export const income = sqliteTable(
@@ -216,9 +245,17 @@ export const income = sqliteTable(
     note: text("note"),
     /** Local calendar date, `YYYY-MM-DD`. */
     date: text("date").notNull(),
+    /** Set when created by a recurring income rule (e.g. monthly salary). */
+    recurringId: text("recurring_id").references(() => recurringExpense.id, {
+      onDelete: "set null",
+    }),
     ...timestamps,
   },
-  (t) => [index("income_user_date_idx").on(t.userId, t.date)],
+  (t) => [
+    index("income_user_date_idx").on(t.userId, t.date),
+    // One occurrence per rule per day, even if two requests race.
+    uniqueIndex("income_recurring_date_uq").on(t.recurringId, t.date),
+  ],
 );
 
 /** One row per device/browser that allowed notifications. */

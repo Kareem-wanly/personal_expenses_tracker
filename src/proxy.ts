@@ -2,6 +2,8 @@ import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
 
 const AUTH_PAGES = ["/login", "/register"];
+/** Readable by anyone, signed in or not (app stores link to these). */
+const PUBLIC_PAGES = ["/privacy"];
 
 /**
  * Optimistic redirect only (cookie presence, no DB hit). Real authorization
@@ -9,6 +11,7 @@ const AUTH_PAGES = ["/login", "/register"];
  */
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  if (PUBLIC_PAGES.includes(pathname)) return NextResponse.next();
   const hasSession = !!getSessionCookie(request);
   const isAuthPage = AUTH_PAGES.includes(pathname);
 

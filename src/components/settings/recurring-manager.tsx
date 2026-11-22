@@ -21,8 +21,8 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/compone
 import { Group, Row, RowButton } from "@/components/ui/grouped-list";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
-import type { Frequency, PaymentMethod } from "@/db/schema";
-import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
+import { type Frequency, INCOME_SOURCES, type PaymentMethod } from "@/db/schema";
+import { INCOME_SOURCE_META, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { formatShortDate, toISODate } from "@/lib/dates";
 import { formatMoney, fromMinor } from "@/lib/money";
 import { FREQUENCY_LABELS } from "@/lib/recurrence";
@@ -52,7 +52,7 @@ export function RecurringManager({
   }
 
   const monthlyTotal = rules
-    .filter((r) => r.active)
+    .filter((r) => r.active && r.kind === "expense")
     .reduce((sum, r) => {
       const perMonth =
         r.frequency === "weekly" ? (r.amount * 52) / 12 : r.frequency === "yearly" ? r.amount / 12 : r.amount;
@@ -62,15 +62,15 @@ export function RecurringManager({
   return (
     <>
       <Group
-        header="المصاريف المتكررة"
+        header="المتكرر (مصاريف ودخل)"
         footer={
           rules.length
-            ? `تُضاف تلقائياً في موعدها. ما يعادل ${formatMoney(Math.round(monthlyTotal), currency)} شهرياً.`
-            : "أضف مصروفاً واختر «التكرار» (أسبوعي/شهري/سنوي) ليُضاف تلقائياً في موعده — مثل الإيجار والاشتراكات."
+            ? `تُضاف تلقائياً في موعدها. المصاريف الثابتة تعادل ${formatMoney(Math.round(monthlyTotal), currency)} شهرياً.`
+            : "عند إضافة مصروف أو دخل اختر «التكرار» ليُضاف تلقائياً في موعده — مثل الإيجار والاشتراكات والراتب."
         }
       >
         {rules.length === 0 ? (
-          <Row title={<span className="text-muted-foreground">لا توجد مصاريف متكررة بعد</span>} />
+          <Row title={<span className="text-muted-foreground">لا يوجد شيء متكرر بعد</span>} />
         ) : (
           rules.map((r) => (
             <RowButton
@@ -78,20 +78,33 @@ export function RecurringManager({
               onClick={() => openForm(r)}
               className={r.active ? undefined : "opacity-55"}
               leading={
-                <CategoryIcon
-                  icon={r.categoryIcon}
-                  color={r.categoryColor}
-                  className="size-[30px] rounded-[8px] text-[16px]"
-                />
+                r.kind === "income" ? (
+                  <CategoryIcon
+                    icon={INCOME_SOURCE_META[r.source ?? "salary"].icon}
+                    color="var(--positive)"
+                    className="size-[30px] rounded-[8px] text-[16px]"
+                  />
+                ) : (
+                  <CategoryIcon
+                    icon={r.categoryIcon}
+                    color={r.categoryColor}
+                    className="size-[30px] rounded-[8px] text-[16px]"
+                  />
+                )
               }
-              title={r.note || r.categoryName || "مصروف متكرر"}
+              title={
+                r.note ||
+                (r.kind === "income" ? INCOME_SOURCE_META[r.source ?? "salary"].label : r.categoryName) ||
+                "مصروف متكرر"
+              }
               subtitle={
                 r.active
                   ? `${FREQUENCY_LABELS[r.frequency]} · القادم ${formatShortDate(r.nextDate)}`
                   : `${FREQUENCY_LABELS[r.frequency]} · متوقف مؤقتاً`
               }
               trailing={
-                <span className="text-[15px] font-semibold tabular">
+                <span className={`text-[15px] font-semibold tabular ${r.kind === "income" ? "text-positive" : ""}`}>
+                  {r.kind === "income" ? "+" : ""}
                   {formatMoney(r.amount, currency)}
                 </span>
               }
@@ -174,7 +187,7 @@ function RecurringForm({
           إلغاء
         </button>
         <DrawerTitle className="pointer-events-none absolute inset-x-0 text-center text-[17px] font-semibold">
-          مصروف متكرر
+          {rule.kind === "income" ? "دخل متكرر" : "مصروف متكرر"}
         </DrawerTitle>
         <DrawerDescription className="sr-only">عدّل المبلغ والموعد وطريقة التكرار</DrawerDescription>
         <DeleteRecurring id={rule.id} onDeleted={onDone} />
@@ -240,6 +253,26 @@ function RecurringForm({
               />
             }
           />
+          {rule.kind === "income" ? (
+            <Row
+              title={<label htmlFor="rec-source">المصدر</label>}
+              trailing={
+                <select
+                  id="rec-source"
+                  name="source"
+                  defaultValue={rule.source ?? "salary"}
+                  className={`${field} max-w-44`}
+                >
+                  {INCOME_SOURCES.map((src) => (
+                    <option key={src} value={src}>
+                      {INCOME_SOURCE_META[src].icon} {INCOME_SOURCE_META[src].label}
+                    </option>
+                  ))}
+                </select>
+              }
+            />
+          ) : (
+            <>
           <Row
             title={<label htmlFor="rec-category">التصنيف</label>}
             trailing={
@@ -258,7 +291,7 @@ function RecurringForm({
               </select>
             }
           />
-          <Row
+            <Row
             title="الدفع"
             trailing={
               <SegmentedControl
@@ -274,6 +307,8 @@ function RecurringForm({
               />
             }
           />
+            </>
+          )}
           <Row
             title={
               <input

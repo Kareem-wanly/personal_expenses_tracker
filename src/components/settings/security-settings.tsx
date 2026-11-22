@@ -1,0 +1,128 @@
+"use client";
+
+import { FingerprintIcon, KeyRoundIcon, Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react";
+import { useCallback, useEffect, useState, useSyncExternalStore, useTransition } from "react";
+import { toast } from "sonner";
+
+import { Group, Row, RowButton, RowIcon } from "@/components/ui/grouped-list";
+import { authClient } from "@/lib/auth-client";
+
+type PasskeyItem = { id: string; name?: string | null; createdAt?: string | Date | null };
+
+const noop = () => () => {};
+
+/** A readable default name for this device's passkey. */
+function deviceName() {
+  const ua = navigator.userAgent;
+  if (/iPhone/i.test(ua)) return "iPhone";
+  if (/iPad/i.test(ua)) return "iPad";
+  if (/Android/i.test(ua)) return "Android";
+  if (/Mac/i.test(ua)) return "Mac";
+  if (/Windows/i.test(ua)) return "Windows";
+  return "هذا الجهاز";
+}
+
+const dateFmt = new Intl.DateTimeFormat("ar-u-nu-latn", { day: "numeric", month: "long", year: "numeric" });
+
+/**
+ * Passkeys: sign in with Face ID / fingerprint instead of typing the
+ * password. Keys live in the device's keychain; the server only stores the
+ * public half.
+ */
+export function SecuritySettings() {
+  const supported = useSyncExternalStore(noop, () => typeof window.PublicKeyCredential !== "undefined", () => false);
+  const mounted = useSyncExternalStore(noop, () => true, () => false);
+  const [keys, setKeys] = useState<PasskeyItem[] | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const load = useCallback(async () => {
+    const { data } = await authClient.passkey.listUserPasskeys();
+    setKeys((data as PasskeyItem[] | null) ?? []);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    authClient.passkey.listUserPasskeys().then(({ data }) => {
+      if (!cancelled) setKeys((data as PasskeyItem[] | null) ?? []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function add() {
+    startTransition(async () => {
+      const res = await authClient.passkey.addPasskey({ name: deviceName() });
+      if (res?.error) {
+        const msg = res.error.message ?? "";
+        if (!/cancel|abort|not allowed/i.test(msg)) toast.error("تعذّر إضافة مفتاح المرور");
+        return;
+      }
+      toast.success("تمت إضافة مفتاح المرور — يمكنك الآن الدخول بالبصمة");
+      await load();
+    });
+  }
+
+  function remove(id: string) {
+    startTransition(async () => {
+      const { error } = await authClient.passkey.deletePasskey({ id });
+      if (error) {
+        toast.error("تعذّر الحذف");
+        return;
+      }
+      toast.success("تم حذف مفتاح المرور");
+      await load();
+    });
+  }
+
+  if (!mounted) return null;
+
+  return (
+    <Group
+      header="الأمان"
+      footer={
+        supported
+          ? "مفتاح المرور يحفظه جهازك ويُفتح بالبصمة أو Face ID. لا نخزّن بصمتك؛ يصلنا مفتاح عام فقط."
+          : "هذا المتصفح لا يدعم مفاتيح المرور."
+      }
+    >
+      {keys === null ? (
+        <Row leading={<RowIcon icon={KeyRoundIcon} />} title={<span className="text-muted-foreground">…</span>} />
+      ) : (
+        keys.map((k) => (
+          <Row
+            key={k.id}
+            leading={<RowIcon icon={KeyRoundIcon} />}
+            title={k.name || "مفتاح مرور"}
+            subtitle={k.createdAt ? `أُضيف في ${dateFmt.format(new Date(k.createdAt))}` : undefined}
+            trailing={
+              <button
+                type="button"
+                onClick={() => remove(k.id)}
+                disabled={pending}
+                aria-label={`حذف ${k.name || "مفتاح المرور"}`}
+                className="flex size-9 items-center justify-center rounded-full text-destructive active:bg-foreground/[0.06] disabled:opacity-50"
+              >
+                <Trash2Icon className="size-[18px]" />
+              </button>
+            }
+          />
+        ))
+      )}
+      {supported && (
+        <RowButton
+          onClick={add}
+          disabled={pending}
+          className="text-primary"
+          leading={<RowIcon icon={keys && keys.length ? PlusIcon : FingerprintIcon} />}
+          title={
+            <span className="flex items-center gap-2">
+              {keys && keys.length ? "إضافة مفتاح لجهاز آخر" : "تفعيل الدخول بالبصمة أو Face ID"}
+              {pending && <Loader2Icon className="size-4 animate-spin" />}
+            </span>
+          }
+        />
+      )}
+    </Group>
+  );
+}

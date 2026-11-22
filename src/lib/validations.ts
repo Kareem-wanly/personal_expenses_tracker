@@ -64,6 +64,8 @@ export const incomeSchema = z.object({
   source: z.enum(INCOME_SOURCES).default("salary"),
   date: z.string().regex(DATE_RE, "تاريخ غير صالح"),
   note: optionalText(120),
+  /** New income only: also create a recurring rule (e.g. monthly salary). */
+  repeat: z.enum(["none", ...FREQUENCIES]).default("none"),
 });
 
 export const recurringSchema = z.object({
@@ -77,6 +79,8 @@ export const recurringSchema = z.object({
   paymentMethod: z.enum(PAYMENT_METHODS).default("cash"),
   frequency: z.enum(FREQUENCIES),
   nextDate: z.string().regex(DATE_RE, "تاريخ غير صالح"),
+  /** Income rules only. */
+  source: z.enum(INCOME_SOURCES).optional(),
 });
 
 /** Several expenses parsed from one sentence ("قهوة 5 وسندويشة 7"). */

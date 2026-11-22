@@ -115,6 +115,7 @@ export async function GET(request: NextRequest) {
           .where(
             and(
               eq(recurringExpense.userId, u.id),
+              eq(recurringExpense.kind, "expense"),
               eq(recurringExpense.active, true),
               eq(recurringExpense.nextDate, addDays(today, 1)),
             ),

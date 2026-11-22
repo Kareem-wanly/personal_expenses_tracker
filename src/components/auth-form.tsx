@@ -1,10 +1,10 @@
 "use client";
 
-import { Loader2Icon } from "lucide-react";
+import { FingerprintIcon, Loader2Icon } from "lucide-react";
 import { AnimatePresence, motion, useAnimate } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useId, useState, useTransition } from "react";
+import { useId, useState, useSyncExternalStore, useTransition } from "react";
 
 import { Reveal } from "@/components/motion/reveal";
 import { signIn, signUp } from "@/lib/auth-client";
@@ -69,6 +69,31 @@ export function AuthForm({ mode }: { mode: Mode }) {
         );
         if (scope.current) {
           animate(scope.current, { x: [0, -12, 10, -6, 4, 0] }, { duration: 0.42 });
+        }
+        return;
+      }
+      navigator.vibrate?.(10);
+      router.replace(safeNext(searchParams.get("next")));
+      router.refresh();
+    });
+  }
+
+  /** Face ID / fingerprint: only offered where the browser supports passkeys. */
+  const canPasskey = useSyncExternalStore(
+    () => () => {},
+    () => typeof window.PublicKeyCredential !== "undefined",
+    () => false,
+  );
+
+  function onPasskey() {
+    setError(null);
+    startTransition(async () => {
+      const res = await signIn.passkey();
+      if (res?.error) {
+        // Cancelling the system sheet is not an error worth shouting about.
+        const msg = res.error.message ?? "";
+        if (!/cancel|abort|not allowed/i.test(msg)) {
+          startTransition(() => setError("تعذّر الدخول بمفتاح المرور. جرّب البريد وكلمة المرور."));
         }
         return;
       }
@@ -151,6 +176,18 @@ export function AuthForm({ mode }: { mode: Mode }) {
           {pending && <Loader2Icon className="size-5 animate-spin" />}
           {isLogin ? "تسجيل الدخول" : "إنشاء حساب"}
         </motion.button>
+
+        {isLogin && canPasskey && (
+          <button
+            type="button"
+            onClick={onPasskey}
+            disabled={pending}
+            className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[14px] text-[16px] font-semibold ring-1 ring-inset ring-hairline transition-colors active:bg-foreground/[0.06] disabled:opacity-70"
+          >
+            <FingerprintIcon className="size-5" strokeWidth={1.75} />
+            الدخول بالبصمة أو Face ID
+          </button>
+        )}
 
         <p className="text-center text-[15px] text-muted-foreground">
           {isLogin ? "ليس لديك حساب؟ " : "لديك حساب؟ "}

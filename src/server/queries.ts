@@ -435,6 +435,8 @@ export async function getRecurring() {
       frequency: recurringExpense.frequency,
       nextDate: recurringExpense.nextDate,
       active: recurringExpense.active,
+      kind: recurringExpense.kind,
+      source: recurringExpense.source,
       categoryId: recurringExpense.categoryId,
       categoryName: category.name,
       categoryIcon: category.icon,
@@ -525,7 +527,13 @@ export async function getInsights(month: string, today: string): Promise<Insight
     db
       .select({ amount: recurringExpense.amount, frequency: recurringExpense.frequency })
       .from(recurringExpense)
-      .where(and(eq(recurringExpense.userId, user.id), eq(recurringExpense.active, true))),
+      .where(
+        and(
+          eq(recurringExpense.userId, user.id),
+          eq(recurringExpense.active, true),
+          eq(recurringExpense.kind, "expense"),
+        ),
+      ),
     db
       .select({ avg: avg(expense.amount).mapWith(Number), max: max(expense.amount) })
       .from(expense)
@@ -577,4 +585,16 @@ export async function getInsights(month: string, today: string): Promise<Insight
       : null,
     averageExpense: stats[0]?.avg ?? 0,
   });
+}
+
+/** Income entries of one month, newest first (CSV export). */
+export async function getMonthIncomes(month: string): Promise<IncomeRow[]> {
+  const user = await requireUser();
+  await ensureRecurring(user.id);
+  const { start, end } = monthRange(month);
+  return (await db
+    .select(incomeSelect)
+    .from(income)
+    .where(and(eq(income.userId, user.id), between(income.date, start, end)))
+    .orderBy(desc(income.date), desc(income.createdAt))) as IncomeRow[];
 }

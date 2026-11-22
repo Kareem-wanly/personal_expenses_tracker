@@ -3,11 +3,12 @@ import "server-only";
 import { and, eq, lte } from "drizzle-orm";
 
 import { db } from "@/db";
-import { expense, recurringExpense } from "@/db/schema";
+import { expense, income, recurringExpense } from "@/db/schema";
 import { dueOccurrences } from "@/lib/recurrence";
 
 /**
- * Create the expenses of every recurring rule that is due up to `today`
+ * Create the expenses (or income, for income rules such as a monthly
+ * salary) of every recurring rule that is due up to `today`
  * (catching up on missed periods) and move each rule's `nextDate` forward.
  *
  * Idempotent: the unique (recurring_id, date) index turns a concurrent
@@ -29,7 +30,22 @@ export async function materializeRecurring(userId: string, today: string): Promi
   let created = 0;
   for (const rule of rules) {
     const { dates, next } = dueOccurrences(rule, today);
-    if (dates.length) {
+    if (dates.length && rule.kind === "income") {
+      const res = await db
+        .insert(income)
+        .values(
+          dates.map((date) => ({
+            userId,
+            amount: rule.amount,
+            source: rule.source ?? "salary",
+            note: rule.note,
+            date,
+            recurringId: rule.id,
+          })),
+        )
+        .onConflictDoNothing();
+      created += res.rowsAffected;
+    } else if (dates.length) {
       const res = await db
         .insert(expense)
         .values(

@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDaysIcon, CheckIcon, Loader2Icon, PencilLineIcon, Trash2Icon } from "lucide-react";
+import { CalendarDaysIcon, CheckIcon, Loader2Icon, PencilLineIcon, RepeatIcon, Trash2Icon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useActionState, useEffect, useEffectEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { INCOME_SOURCES, type IncomeSource } from "@/db/schema";
+import { type Frequency, INCOME_SOURCES, type IncomeSource } from "@/db/schema";
 import { INCOME_SOURCE_META } from "@/lib/constants";
 import { addDays, toISODate } from "@/lib/dates";
 import { fromMinor } from "@/lib/money";
@@ -47,6 +47,7 @@ export function IncomeForm({
   const [amount, setAmount] = useState(income ? String(fromMinor(income.amount)) : "");
   const [source, setSource] = useState<IncomeSource>(income?.source ?? "salary");
   const [date, setDate] = useState(income?.date ?? today);
+  const [repeat, setRepeat] = useState<"none" | Frequency>("none");
   const [dateMode, setDateMode] = useState<DateMode>(
     date === today ? "today" : date === yesterday ? "yesterday" : "other",
   );
@@ -74,6 +75,7 @@ export function IncomeForm({
     <form action={action} className="flex min-h-0 flex-1 flex-col">
       {income && <input type="hidden" name="id" value={income.id} />}
       <input type="hidden" name="date" value={date} />
+      {!income && <input type="hidden" name="repeat" value={repeat} />}
       <input type="hidden" name="source" value={source} />
 
       <div className="relative flex h-11 shrink-0 items-center justify-between px-4">
@@ -187,6 +189,22 @@ export function IncomeForm({
               </motion.div>
             )}
           </AnimatePresence>
+          {!income && (
+            <SheetRow icon={RepeatIcon} label="التكرار">
+              <SegmentedControl
+                label="التكرار"
+                value={repeat}
+                onChange={setRepeat}
+                className="w-56"
+                options={[
+                  { value: "none", label: "لا" },
+                  { value: "weekly", label: "أسبوعي" },
+                  { value: "monthly", label: "شهري" },
+                  { value: "yearly", label: "سنوي" },
+                ]}
+              />
+            </SheetRow>
+          )}
           <SheetRow icon={PencilLineIcon}>
             <input
               name="note"

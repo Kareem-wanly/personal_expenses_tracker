@@ -191,20 +191,39 @@ export async function saveIncome(
   const user = await requireUser();
   const parsed = incomeSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fromZodError(parsed.error);
-  const { id, amount, source, date, note } = parsed.data;
+  const { id, amount, source, date, note, repeat } = parsed.data;
   const values = { amount: toMinor(amount), source, date, note };
 
+  let message = id ? "تم تحديث الدخل" : "تمت إضافة الدخل";
   if (id) {
     const res = await db
       .update(income)
       .set(values)
       .where(and(eq(income.id, id), eq(income.userId, user.id)));
     if (res.rowsAffected === 0) return { ok: false, message: "الدخل غير موجود" };
+  } else if (repeat !== "none") {
+    // First occurrence of a new recurring income (e.g. monthly salary).
+    const [rule] = await db
+      .insert(recurringExpense)
+      .values({
+        userId: user.id,
+        kind: "income",
+        source,
+        amount: values.amount,
+        note,
+        frequency: repeat,
+        startDate: date,
+        nextDate: nextOccurrence(date, repeat, date),
+      })
+      .returning({ id: recurringExpense.id });
+    await db.insert(income).values({ ...values, userId: user.id, recurringId: rule.id });
+    await materializeRecurring(user.id, todayISO(user.timezone));
+    message = `تمت الإضافة، وسيتكرر ${FREQUENCY_LABELS[repeat]}`;
   } else {
     await db.insert(income).values({ ...values, userId: user.id });
   }
   refresh();
-  return { ok: true, message: id ? "تم تحديث الدخل" : "تمت إضافة الدخل" };
+  return { ok: true, message };
 }
 
 export async function deleteIncome(id: string): Promise<ActionState> {
@@ -303,7 +322,7 @@ export async function saveRecurring(
   const user = await requireUser();
   const parsed = recurringSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fromZodError(parsed.error);
-  const { id, amount, categoryId, note, paymentMethod, frequency, nextDate } = parsed.data;
+  const { id, amount, categoryId, note, paymentMethod, frequency, nextDate, source } = parsed.data;
 
   if (!(await assertCategoryOwned(user.id, categoryId))) {
     return { ok: false, message: "التصنيف غير موجود" };
@@ -323,6 +342,7 @@ export async function saveRecurring(
       frequency,
       nextDate,
       startDate: nextDate,
+      ...(source ? { source } : {}),
     })
     .where(and(eq(recurringExpense.id, id), eq(recurringExpense.userId, user.id)));
   if (res.rowsAffected === 0) return { ok: false, message: "المصروف المتكرر غير موجود" };
@@ -357,16 +377,20 @@ export async function setRecurringActive(id: string, active: boolean): Promise<A
 
 export async function deleteRecurring(id: string): Promise<ActionState> {
   const user = await requireUser();
-  // Past expenses stay; they just stop pointing at the deleted rule.
+  // Past entries stay; they just stop pointing at the deleted rule.
   await db
     .update(expense)
     .set({ recurringId: null })
     .where(and(eq(expense.recurringId, id), eq(expense.userId, user.id)));
   await db
+    .update(income)
+    .set({ recurringId: null })
+    .where(and(eq(income.recurringId, id), eq(income.userId, user.id)));
+  await db
     .delete(recurringExpense)
     .where(and(eq(recurringExpense.id, id), eq(recurringExpense.userId, user.id)));
   refresh();
-  return { ok: true, message: "تم حذف المصروف المتكرر" };
+  return { ok: true, message: "تم حذف التكرار" };
 }
 
 export async function deleteCategory(id: string): Promise<ActionState> {
