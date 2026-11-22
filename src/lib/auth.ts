@@ -8,7 +8,7 @@ import { passkey } from "@better-auth/passkey";
 import { db, schema } from "@/db";
 import { purgeUserData } from "@/lib/account-data";
 import { APP_NAME, DEFAULT_CATEGORIES } from "@/lib/constants";
-import { env } from "@/lib/env";
+import { env, googleEnabled } from "@/lib/env";
 
 /** Vercel exposes the deployment domains (without protocol) at runtime. */
 const vercelOrigins = [
@@ -40,6 +40,19 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     autoSignIn: true,
   },
+  // Redirect URI to register in Google Cloud: <baseURL>/api/auth/callback/google
+  socialProviders: googleEnabled
+    ? {
+        google: {
+          clientId: env.GOOGLE_CLIENT_ID!,
+          clientSecret: env.GOOGLE_CLIENT_SECRET!,
+          prompt: "select_account",
+        },
+      }
+    : {},
+  // An existing email+password account is NOT linked to Google on sign-in
+  // (its email was never verified, so that would allow pre-registration
+  // takeover). Users link Google from Settings while signed in instead.
   session: {
     // Personal finance app used daily on a phone: keep users signed in.
     expiresIn: 60 * 60 * 24 * 30, // 30 days

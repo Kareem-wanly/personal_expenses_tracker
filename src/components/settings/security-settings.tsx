@@ -4,6 +4,7 @@ import { FingerprintIcon, KeyRoundIcon, Loader2Icon, PlusIcon, Trash2Icon } from
 import { useCallback, useEffect, useState, useSyncExternalStore, useTransition } from "react";
 import { toast } from "sonner";
 
+import { GoogleIcon } from "@/components/icons/google-icon";
 import { AppLockSettings } from "@/components/settings/app-lock-settings";
 import { Group, Row, RowButton, RowIcon } from "@/components/ui/grouped-list";
 import { readLock, writeLock } from "@/lib/app-lock";
@@ -31,16 +32,48 @@ const dateFmt = new Intl.DateTimeFormat("ar-u-nu-latn", { day: "numeric", month:
  * password. Keys live in the device's keychain; the server only stores the
  * public half.
  */
-export function SecuritySettings({ userId }: { userId: string }) {
+export function SecuritySettings({ userId, google }: { userId: string; google: boolean }) {
   const supported = useSyncExternalStore(noop, () => typeof window.PublicKeyCredential !== "undefined", () => false);
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   const [keys, setKeys] = useState<PasskeyItem[] | null>(null);
+  const [googleLinked, setGoogleLinked] = useState<boolean | null>(null);
   const [pending, startTransition] = useTransition();
 
   const load = useCallback(async () => {
     const { data } = await authClient.passkey.listUserPasskeys();
     setKeys((data as PasskeyItem[] | null) ?? []);
   }, []);
+
+  useEffect(() => {
+    if (!google) return;
+    let cancelled = false;
+    authClient.listAccounts().then(({ data }) => {
+      if (!cancelled) setGoogleLinked(!!data?.some((a) => a.providerId === "google"));
+    });
+    // Coming back from Google after "link": report the outcome once.
+    const params = new URLSearchParams(location.search);
+    const linked = params.get("linked");
+    const err = params.get("error");
+    if (linked || err) {
+      if (linked === "google") toast.success("تم ربط حساب Google");
+      else if (err) toast.error(err === "email_doesn't_match" ? "بريد Google مختلف عن بريد حسابك" : "تعذّر ربط Google");
+      history.replaceState(null, "", location.pathname);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [google]);
+
+  function linkGoogle() {
+    startTransition(async () => {
+      const { error } = await authClient.linkSocial({
+        provider: "google",
+        callbackURL: "/settings?linked=google",
+        errorCallbackURL: "/settings",
+      });
+      if (error) toast.error("تعذّر الاتصال بـ Google");
+    });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -117,6 +150,25 @@ export function SecuritySettings({ userId }: { userId: string }) {
               }
             />
           ))
+        )}
+        {google && (
+          <Row
+            leading={<GoogleIcon className="size-[19px] shrink-0" />}
+            title="حساب Google"
+            subtitle={googleLinked ? "مرتبط — يمكنك الدخول بـ Google" : "اربطه لتدخل بضغطة واحدة"}
+            trailing={
+              googleLinked === false ? (
+                <button
+                  type="button"
+                  onClick={linkGoogle}
+                  disabled={pending}
+                  className="h-8 rounded-full px-3 text-[14px] font-semibold text-primary ring-1 ring-inset ring-hairline active:bg-foreground/[0.06] disabled:opacity-50"
+                >
+                  ربط
+                </button>
+              ) : null
+            }
+          />
         )}
         {supported && (
           <RowButton

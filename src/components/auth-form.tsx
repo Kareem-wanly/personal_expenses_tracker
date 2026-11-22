@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useId, useState, useSyncExternalStore, useTransition } from "react";
 
+import { GoogleIcon } from "@/components/icons/google-icon";
 import { Reveal } from "@/components/motion/reveal";
 import { signIn, signUp } from "@/lib/auth-client";
 
@@ -19,13 +20,18 @@ const ERRORS: Record<string, string> = {
   INVALID_EMAIL: "البريد الإلكتروني غير صالح",
 };
 
+/** Errors Better Auth puts in `?error=` after the Google round-trip. */
+const OAUTH_ERRORS: Record<string, string> = {
+  account_not_linked: "هذا البريد مسجّل بكلمة مرور. ادخل بها، ثم اربط Google من الإعدادات ← الأمان.",
+  access_denied: "",
+};
+
 /** Only allow same-origin relative redirects (prevents open redirects). */
 function safeNext(next: string | null) {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
 }
 
-const input =
-  "h-12 min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground/70";
+const input = "h-12 min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground/70";
 
 /** One labelled row of the grouped field card. */
 function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
@@ -41,10 +47,13 @@ function Field({ label, htmlFor, children }: { label: string; htmlFor: string; c
   );
 }
 
-export function AuthForm({ mode }: { mode: Mode }) {
+export function AuthForm({ mode, google = false }: { mode: Mode; google?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [error, setError] = useState<string | null>(null);
+  const oauthError = searchParams.get("error");
+  const [error, setError] = useState<string | null>(() =>
+    oauthError ? (OAUTH_ERRORS[oauthError] ?? "تعذّر الدخول بحساب Google، حاول مجدداً") || null : null,
+  );
   const [pending, startTransition] = useTransition();
   const [scope, animate] = useAnimate<HTMLDivElement>();
   const isLogin = mode === "login";
@@ -64,9 +73,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         : await signUp.email({ email, password, name });
 
       if (error) {
-        startTransition(() =>
-          setError((error.code && ERRORS[error.code]) || error.message || "حدث خطأ، حاول مجدداً"),
-        );
+        startTransition(() => setError((error.code && ERRORS[error.code]) || error.message || "حدث خطأ، حاول مجدداً"));
         if (scope.current) {
           animate(scope.current, { x: [0, -12, 10, -6, 4, 0] }, { duration: 0.42 });
         }
@@ -100,6 +107,19 @@ export function AuthForm({ mode }: { mode: Mode }) {
       navigator.vibrate?.(10);
       router.replace(safeNext(searchParams.get("next")));
       router.refresh();
+    });
+  }
+
+  function onGoogle() {
+    setError(null);
+    startTransition(async () => {
+      // Full-page redirect to Google; errors come back as ?error= on /login.
+      const { error } = await signIn.social({
+        provider: "google",
+        callbackURL: safeNext(searchParams.get("next")),
+        errorCallbackURL: "/login",
+      });
+      if (error) startTransition(() => setError("تعذّر الاتصال بـ Google، حاول مجدداً"));
     });
   }
 
@@ -177,6 +197,18 @@ export function AuthForm({ mode }: { mode: Mode }) {
           {isLogin ? "تسجيل الدخول" : "إنشاء حساب"}
         </motion.button>
 
+        {google && (
+          <button
+            type="button"
+            onClick={onGoogle}
+            disabled={pending}
+            className="flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[14px] bg-card text-[16px] font-semibold ring-1 ring-inset ring-hairline transition-colors active:bg-foreground/[0.06] disabled:opacity-70"
+          >
+            <GoogleIcon className="size-5" />
+            المتابعة بحساب Google
+          </button>
+        )}
+
         {isLogin && canPasskey && (
           <button
             type="button"
@@ -191,10 +223,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
         <p className="text-center text-[15px] text-muted-foreground">
           {isLogin ? "ليس لديك حساب؟ " : "لديك حساب؟ "}
-          <Link
-            href={isLogin ? "/register" : "/login"}
-            className="font-semibold text-primary active:opacity-60"
-          >
+          <Link href={isLogin ? "/register" : "/login"} className="font-semibold text-primary active:opacity-60">
             {isLogin ? "أنشئ حساباً مجانياً" : "سجّل الدخول"}
           </Link>
         </p>

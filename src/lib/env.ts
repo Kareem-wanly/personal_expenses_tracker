@@ -33,6 +33,9 @@ const schema = z.object({
   ),
   /** Vercel sends `Authorization: Bearer $CRON_SECRET` to cron routes. */
   CRON_SECRET: pasted("CRON_SECRET"),
+  // "Continue with Google" (optional: the button is hidden when missing).
+  GOOGLE_CLIENT_ID: pasted("GOOGLE_CLIENT_ID"),
+  GOOGLE_CLIENT_SECRET: pasted("GOOGLE_CLIENT_SECRET"),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -43,3 +46,6 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+
+/** Google sign-in is offered only when both OAuth keys are configured. */
+export const googleEnabled = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);

@@ -111,6 +111,8 @@ function RestoreRow() {
 /** Account deletion: last item in Settings, behind a password check. */
 export function DeleteAccount() {
   const [password, setPassword] = useState("");
+  // Accounts created with Google have no password; null while checking.
+  const [hasPassword, setHasPassword] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -118,12 +120,15 @@ export function DeleteAccount() {
   function confirm() {
     setError(null);
     startTransition(async () => {
-      const { error } = await authClient.deleteUser({ password });
+      // Without a password Better Auth requires a recent sign-in instead.
+      const { error } = await authClient.deleteUser(hasPassword === false ? {} : { password });
       if (error) {
         setError(
           error.code === "INVALID_PASSWORD" || error.code === "INVALID_EMAIL_OR_PASSWORD"
             ? "كلمة المرور غير صحيحة"
-            : (error.message ?? "تعذّر حذف الحساب"),
+            : error.code === "SESSION_EXPIRED"
+              ? "لحماية حسابك: سجّل الخروج وادخل من جديد، ثم أعد المحاولة."
+              : (error.message ?? "تعذّر حذف الحساب"),
         );
         return;
       }
@@ -138,7 +143,18 @@ export function DeleteAccount() {
   }
 
   return (
-    <AlertDialog onOpenChange={(open) => !open && (setPassword(""), setError(null))}>
+    <AlertDialog
+      onOpenChange={(open) => {
+        if (open) {
+          authClient
+            .listAccounts()
+            .then(({ data }) => setHasPassword(data ? data.some((a) => a.providerId === "credential") : true));
+        } else {
+          setPassword("");
+          setError(null);
+        }
+      }}
+    >
       <Group footer="يحذف حسابك وكل مصاريفك ودخلك نهائياً. نزّل نسخة أولاً إن أردت الاحتفاظ بها.">
         <AlertDialogTrigger
           render={
@@ -159,24 +175,31 @@ export function DeleteAccount() {
         <AlertDialogHeader>
           <AlertDialogTitle>حذف الحساب نهائياً؟</AlertDialogTitle>
           <AlertDialogDescription>
-            سيُحذف حسابك وكل بياناتك ولا يمكن التراجع. أدخل كلمة المرور للتأكيد.
+            سيُحذف حسابك وكل بياناتك ولا يمكن التراجع.
+            {hasPassword !== false && " أدخل كلمة المرور للتأكيد."}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <input
-          type="password"
-          autoComplete="current-password"
-          dir="ltr"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="كلمة المرور"
-          aria-label="كلمة المرور"
-          aria-invalid={!!error}
-          className="h-11 w-full rounded-[12px] bg-foreground/[0.05] px-3 text-left text-[16px] outline-none ring-1 ring-inset ring-hairline focus:ring-2 focus:ring-ring"
-        />
+        {hasPassword !== false && (
+          <input
+            type="password"
+            autoComplete="current-password"
+            dir="ltr"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="كلمة المرور"
+            aria-label="كلمة المرور"
+            aria-invalid={!!error}
+            className="h-11 w-full rounded-[12px] bg-foreground/[0.05] px-3 text-left text-[16px] outline-none ring-1 ring-inset ring-hairline focus:ring-2 focus:ring-ring"
+          />
+        )}
         {error && <p className="text-[13px] text-destructive">{error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>إلغاء</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={confirm} disabled={pending || password.length < 8}>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={confirm}
+            disabled={pending || hasPassword === null || (hasPassword && password.length < 8)}
+          >
             {pending && <Loader2Icon className="size-4 animate-spin" />}
             حذف نهائي
           </AlertDialogAction>

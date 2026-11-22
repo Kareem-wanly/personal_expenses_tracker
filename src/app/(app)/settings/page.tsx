@@ -17,6 +17,7 @@ import { WhatsNewRow } from "@/components/whats-new";
 import { Group, RowButton } from "@/components/ui/grouped-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { APP_NAME } from "@/lib/constants";
+import { googleEnabled } from "@/lib/env";
 import { requireUser } from "@/lib/dal";
 import { signOutAction } from "@/server/actions";
 import { getCategories, getCategoriesWithUsage, getRecurring } from "@/server/queries";
@@ -144,5 +145,5 @@ async function Categories() {
 
 async function Security() {
   const user = await requireUser();
-  return <SecuritySettings userId={user.id} />;
+  return <SecuritySettings userId={user.id} google={googleEnabled} />;
 }

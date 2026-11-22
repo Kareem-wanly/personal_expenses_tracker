@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense, ViewTransition } from "react";
 
 import { AuthForm } from "@/components/auth-form";
+import { googleEnabled } from "@/lib/env";
 
 export const metadata: Metadata = { title: "إنشاء حساب" };
 
@@ -12,7 +13,7 @@ export default function RegisterPage() {
       <div>
         {/* useSearchParams needs a Suspense boundary for static prerendering. */}
         <Suspense>
-          <AuthForm mode="register" />
+          <AuthForm mode="register" google={googleEnabled} />
         </Suspense>
       </div>
     </ViewTransition>
