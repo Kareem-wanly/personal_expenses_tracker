@@ -89,6 +89,8 @@ const expenseSelect = {
   categoryIcon: category.icon,
   categoryColor: category.color,
   recurringId: expense.recurringId,
+  originalAmount: expense.originalAmount,
+  originalCurrency: expense.originalCurrency,
 };
 
 export type ExpenseRow = {
@@ -102,6 +104,9 @@ export type ExpenseRow = {
   categoryIcon: string | null;
   categoryColor: string | null;
   recurringId: string | null;
+  /** Set when typed in another currency (`amount` is converted). */
+  originalAmount: number | null;
+  originalCurrency: string | null;
 };
 
 async function sumBetween(userId: string, start: string, end: string) {
@@ -149,6 +154,8 @@ const incomeSelect = {
   source: income.source,
   note: income.note,
   date: income.date,
+  originalAmount: income.originalAmount,
+  originalCurrency: income.originalCurrency,
 };
 
 export type IncomeRow = {
@@ -157,6 +164,8 @@ export type IncomeRow = {
   source: "salary" | "freelance" | "business" | "gift" | "investment" | "other";
   note: string | null;
   date: string;
+  originalAmount: number | null;
+  originalCurrency: string | null;
 };
 
 async function incomeBetween(userId: string, start: string, end: string) {

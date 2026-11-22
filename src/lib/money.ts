@@ -2,6 +2,16 @@
  * Money helpers. Amounts are stored as integers in minor units (x100) to
  * avoid floating-point rounding errors (0.1 + 0.2 !== 0.3).
  */
+/** Accepts "12.5", "12,5" and Arabic-Indic digits ("١٢٫٥"). */
+export function normalizeAmountInput(raw: string): string {
+  return raw
+    .trim()
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[٫,]/g, ".")
+    .replace(/[^\d.]/g, "");
+}
+
 export const MINOR_UNIT = 100;
 
 export function toMinor(amount: number): number {

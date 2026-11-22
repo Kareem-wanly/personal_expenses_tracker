@@ -27,6 +27,7 @@ import {
   monthTotal,
 } from "@/lib/notifications";
 import { pushEnabled, sendPushToUser } from "@/lib/push";
+import { exchangeRate } from "@/lib/rates";
 import { FREQUENCY_LABELS, dueOccurrences, nextOccurrence } from "@/lib/recurrence";
 import { countExpenses } from "@/lib/plural";
 import { materializeRecurring } from "@/lib/recurring";
@@ -40,6 +41,33 @@ import {
   recurringSchema,
   settingsSchema,
 } from "@/lib/validations";
+
+/**
+ * Money typed in another currency becomes the user's currency at the given
+ * rate; the original amount and currency are kept alongside.
+ */
+function convertMoney(
+  user: CurrentUser,
+  amount: number,
+  currency: string | undefined,
+  rate: number | null,
+): { amount: number; originalAmount: number | null; originalCurrency: string | null } | ActionState {
+  if (!currency || currency === user.currency) {
+    return { amount: toMinor(amount), originalAmount: null, originalCurrency: null };
+  }
+  if (!rate) {
+    return { ok: false, message: "أدخل سعر الصرف", fieldErrors: { rate: ["أدخل سعر الصرف"] } };
+  }
+  return { amount: toMinor(amount * rate), originalAmount: toMinor(amount), originalCurrency: currency };
+}
+
+const isActionState = (v: object): v is ActionState => "ok" in v;
+
+/** Today's rate for the currency picker (the user can still edit it). */
+export async function getExchangeRate(from: string, to: string): Promise<number | null> {
+  await requireUser();
+  return exchangeRate(from, to);
+}
 
 /* -------------------------------------------------------------------------- */
 /*  Server Actions are public endpoints: each one re-authenticates and        */
@@ -134,14 +162,16 @@ export async function saveExpense(
   const parsed = expenseSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fromZodError(parsed.error);
 
-  const { id, amount, categoryId, date, note, paymentMethod, repeat } = parsed.data;
+  const { id, amount, categoryId, date, note, paymentMethod, repeat, currency, rate } = parsed.data;
 
   if (!(await assertCategoryOwned(user.id, categoryId))) {
     return { ok: false, message: "التصنيف غير موجود" };
   }
+  const money = convertMoney(user, amount, currency, rate);
+  if (isActionState(money)) return money;
 
   const values = {
-    amount: toMinor(amount),
+    ...money,
     categoryId,
     date,
     note,
@@ -162,7 +192,10 @@ export async function saveExpense(
     const [rule] = await db
       .insert(recurringExpense)
       .values({
-        ...values,
+        amount: values.amount,
+        categoryId,
+        note,
+        paymentMethod,
         userId: user.id,
         frequency: repeat,
         startDate: date,
@@ -191,8 +224,10 @@ export async function saveIncome(
   const user = await requireUser();
   const parsed = incomeSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fromZodError(parsed.error);
-  const { id, amount, source, date, note, repeat } = parsed.data;
-  const values = { amount: toMinor(amount), source, date, note };
+  const { id, amount, source, date, note, repeat, currency, rate } = parsed.data;
+  const money = convertMoney(user, amount, currency, rate);
+  if (isActionState(money)) return money;
+  const values = { ...money, source, date, note };
 
   let message = id ? "تم تحديث الدخل" : "تمت إضافة الدخل";
   if (id) {
@@ -505,6 +540,7 @@ const prefsSchema = z.object({
   notifyDailyReminder: z.boolean(),
   notifyMonthlySummary: z.boolean(),
   notifyRecurring: z.boolean(),
+  notifyDebts: z.boolean().optional(),
 });
 
 export async function updateNotificationPrefs(

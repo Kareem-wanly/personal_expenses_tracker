@@ -38,6 +38,9 @@ export function ExpenseRowContent({
               expense.note ? (expense.categoryName ?? "غير مصنّف") : null,
               meta,
               PAYMENT_METHOD_LABELS[expense.paymentMethod],
+              expense.originalCurrency && expense.originalAmount !== null
+                ? formatMoney(expense.originalAmount, expense.originalCurrency)
+                : null,
             ]
               .filter(Boolean)
               .join(" · ")}

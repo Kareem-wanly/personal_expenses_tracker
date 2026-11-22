@@ -15,11 +15,13 @@ import { TabScreen } from "@/components/layout/tab-screen";
 import { AnimatedMoney } from "@/components/motion/animated-money";
 import { Reveal } from "@/components/motion/reveal";
 import { NotificationPrompt } from "@/components/notification-prompt";
+import { PlansTiles } from "@/components/plans/plans-tiles";
 import { SpendingBreakdown } from "@/components/spending-breakdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDayLabel, formatMonthLabel, parseISODate } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { TAB_FORWARD } from "@/lib/tabs";
+import { getPlansSummary } from "@/server/plans";
 import { getDashboardData, getInsights, getUserToday } from "@/server/queries";
 
 export default function HomePage() {
@@ -110,6 +112,11 @@ async function Dashboard() {
         </div>
       </Reveal>
 
+      {/* Goals & debts stream in on their own, below the month figures. */}
+      <Suspense fallback={<Skeleton className="h-[112px] rounded-[22px]" />}>
+        <HomePlans today={today} />
+      </Suspense>
+
       {!hasData ? (
         <Reveal index={2}>
           <EmptyState
@@ -149,6 +156,15 @@ async function Dashboard() {
         </>
       )}
     </div>
+  );
+}
+
+async function HomePlans({ today }: { today: string }) {
+  const summary = await getPlansSummary(today);
+  return (
+    <Reveal index={2}>
+      <PlansTiles summary={summary} />
+    </Reveal>
   );
 }
 

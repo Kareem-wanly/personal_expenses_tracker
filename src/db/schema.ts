@@ -43,6 +43,7 @@ export const user = sqliteTable("user", {
     .notNull()
     .default(true),
   notifyRecurring: integer("notify_recurring", { mode: "boolean" }).notNull().default(true),
+  notifyDebts: integer("notify_debts", { mode: "boolean" }).notNull().default(true),
   ...timestamps,
 });
 
@@ -194,6 +195,16 @@ export const recurringExpense = sqliteTable(
   ],
 );
 
+/**
+ * Entered in another currency (e.g. 50 EUR while the app is in SYP):
+ * `amount` holds the converted value in the user's currency, so every total
+ * and report keeps working; these keep what was actually typed.
+ */
+const originalMoney = {
+  originalAmount: integer("original_amount"),
+  originalCurrency: text("original_currency"),
+};
+
 export const expense = sqliteTable(
   "expense",
   {
@@ -218,6 +229,7 @@ export const expense = sqliteTable(
     recurringId: text("recurring_id").references(() => recurringExpense.id, {
       onDelete: "set null",
     }),
+    ...originalMoney,
     ...timestamps,
   },
   (t) => [
@@ -249,6 +261,7 @@ export const income = sqliteTable(
     recurringId: text("recurring_id").references(() => recurringExpense.id, {
       onDelete: "set null",
     }),
+    ...originalMoney,
     ...timestamps,
   },
   (t) => [
@@ -256,6 +269,108 @@ export const income = sqliteTable(
     // One occurrence per rule per day, even if two requests race.
     uniqueIndex("income_recurring_date_uq").on(t.recurringId, t.date),
   ],
+);
+
+/* -------------------------------------------------------------------------- */
+/*                              Debts & savings                               */
+/* -------------------------------------------------------------------------- */
+
+/** `lent`: someone owes me ("لي عند فلان"); `borrowed`: I owe someone. */
+export const DEBT_DIRECTIONS = ["lent", "borrowed"] as const;
+export type DebtDirection = (typeof DEBT_DIRECTIONS)[number];
+
+/**
+ * Money lent or borrowed. Kept apart from expenses/income: lending isn't
+ * spending. Amounts are in the debt's own currency (minor units).
+ */
+export const debt = sqliteTable(
+  "debt",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    direction: text("direction", { enum: DEBT_DIRECTIONS }).notNull(),
+    person: text("person").notNull(),
+    amount: integer("amount").notNull(),
+    currency: text("currency").notNull(),
+    note: text("note"),
+    /** When the money changed hands, `YYYY-MM-DD`. */
+    date: text("date").notNull(),
+    /** Optional repayment date, `YYYY-MM-DD`. */
+    dueDate: text("due_date"),
+    /** Set once fully repaid. */
+    settledAt: integer("settled_at", { mode: "timestamp_ms" }),
+    ...timestamps,
+  },
+  (t) => [index("debt_user_idx").on(t.userId, t.settledAt)],
+);
+
+/** A (partial) repayment of a debt, in the debt's currency. */
+export const debtPayment = sqliteTable(
+  "debt_payment",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    debtId: text("debt_id")
+      .notNull()
+      .references(() => debt.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    amount: integer("amount").notNull(),
+    date: text("date").notNull(),
+    note: text("note"),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [index("debt_payment_debt_idx").on(t.debtId)],
+);
+
+/** Something to save up for ("سيارة", "سفر"), in its own currency. */
+export const savingGoal = sqliteTable(
+  "saving_goal",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    icon: text("icon").notNull().default("🎯"),
+    target: integer("target").notNull(),
+    currency: text("currency").notNull(),
+    /** Optional target date, `YYYY-MM-DD`. */
+    deadline: text("deadline"),
+    /** Set when the saved amount first reaches the target. */
+    achievedAt: integer("achieved_at", { mode: "timestamp_ms" }),
+    ...timestamps,
+  },
+  (t) => [index("saving_goal_user_idx").on(t.userId)],
+);
+
+/** Money put aside for a goal (negative = taken back out). */
+export const goalContribution = sqliteTable(
+  "goal_contribution",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    goalId: text("goal_id")
+      .notNull()
+      .references(() => savingGoal.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    amount: integer("amount").notNull(),
+    date: text("date").notNull(),
+    note: text("note"),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [index("goal_contribution_goal_idx").on(t.goalId)],
 );
 
 /** One row per device/browser that allowed notifications. */

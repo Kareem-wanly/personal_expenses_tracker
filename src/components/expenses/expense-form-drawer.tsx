@@ -27,6 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
+import { CurrencyPicker, RateLine, lastRate, rememberRate } from "@/components/money/currency-fields";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { addDays, toISODate } from "@/lib/dates";
@@ -114,7 +115,14 @@ function ExpenseForm({
   const today = toISODate(new Date());
   const yesterday = addDays(today, -1);
 
-  const [amount, setAmount] = useState(expense ? String(fromMinor(expense.amount)) : "");
+  const [amount, setAmount] = useState(
+    expense ? String(fromMinor(expense.originalAmount ?? expense.amount)) : "",
+  );
+  // Typed in another currency? Then `amount` is in `cur`, converted at `rate`.
+  const [cur, setCur] = useState(expense?.originalCurrency ?? currency);
+  const [rate, setRate] = useState(
+    expense?.originalAmount ? String(Number((expense.amount / expense.originalAmount).toPrecision(6))) : "",
+  );
   const [categoryId, setCategoryId] = useState(
     (expense ? expense.categoryId : categories[0]?.id) ?? "",
   );
@@ -134,6 +142,7 @@ function ExpenseForm({
     if (state.ok) {
       navigator.vibrate?.(10);
       toast.success(state.message);
+      if (cur !== currency) rememberRate(cur, currency, rate);
       closeExpenseForm();
     } else if (state.message) {
       toast.error(state.message);
@@ -141,6 +150,7 @@ function ExpenseForm({
         animateAmount(amountScope.current, { x: [0, -12, 10, -6, 4, 0] }, { duration: 0.42 });
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on a new result
   }, [state, amountScope, animateAmount]);
 
   const errors = state.fieldErrors ?? {};
@@ -294,9 +304,27 @@ function ExpenseForm({
             style={{ fontSize: amountSize }}
             className="h-[72px] w-full bg-transparent text-center font-display font-semibold leading-none caret-primary tabular outline-none transition-[font-size] duration-200 placeholder:text-foreground/20"
           />
-          <span className="mt-1 text-[13px] font-semibold tracking-wide text-muted-foreground">
-            {currency}
-          </span>
+          <CurrencyPicker
+            name="currency"
+            value={cur}
+            main={currency}
+            onChange={(c) => {
+              setCur(c);
+              setRate(c === currency ? "" : (lastRate(c, currency) ?? ""));
+            }}
+            className="mt-1"
+          />
+          {cur !== currency && (
+            <RateLine
+              key={cur}
+              from={cur}
+              to={currency}
+              amount={amount}
+              rate={rate}
+              setRate={setRate}
+              error={errors.rate?.[0]}
+            />
+          )}
           <AnimatePresence>
             {errors.amount && (
               <motion.p

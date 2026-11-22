@@ -17,6 +17,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
+import { CurrencyPicker, RateLine, lastRate, rememberRate } from "@/components/money/currency-fields";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { type Frequency, INCOME_SOURCES, type IncomeSource } from "@/db/schema";
 import { INCOME_SOURCE_META } from "@/lib/constants";
@@ -44,7 +45,11 @@ export function IncomeForm({
   const today = toISODate(new Date());
   const yesterday = addDays(today, -1);
 
-  const [amount, setAmount] = useState(income ? String(fromMinor(income.amount)) : "");
+  const [amount, setAmount] = useState(income ? String(fromMinor(income.originalAmount ?? income.amount)) : "");
+  const [cur, setCur] = useState(income?.originalCurrency ?? currency);
+  const [rate, setRate] = useState(
+    income?.originalAmount ? String(Number((income.amount / income.originalAmount).toPrecision(6))) : "",
+  );
   const [source, setSource] = useState<IncomeSource>(income?.source ?? "salary");
   const [date, setDate] = useState(income?.date ?? today);
   const [repeat, setRepeat] = useState<"none" | Frequency>("none");
@@ -56,6 +61,7 @@ export function IncomeForm({
     if (result.ok) {
       navigator.vibrate?.(10);
       toast.success(result.message);
+      if (cur !== currency) rememberRate(cur, currency, rate);
       closeExpenseForm();
     } else if (result.message) {
       toast.error(result.message);
@@ -109,9 +115,27 @@ export function IncomeForm({
             style={{ fontSize: amountSize }}
             className="h-[72px] w-full bg-transparent text-center font-display font-semibold leading-none text-positive caret-primary tabular outline-none transition-[font-size] duration-200 placeholder:text-foreground/20"
           />
-          <span className="mt-1 text-[13px] font-semibold tracking-wide text-positive">
-            + {currency}
-          </span>
+          <CurrencyPicker
+            name="currency"
+            value={cur}
+            main={currency}
+            onChange={(c) => {
+              setCur(c);
+              setRate(c === currency ? "" : (lastRate(c, currency) ?? ""));
+            }}
+            className="mt-1"
+          />
+          {cur !== currency && (
+            <RateLine
+              key={cur}
+              from={cur}
+              to={currency}
+              amount={amount}
+              rate={rate}
+              setRate={setRate}
+              error={state.fieldErrors?.rate?.[0]}
+            />
+          )}
           {state.fieldErrors?.amount && (
             <p className="mt-2 text-[13px] font-medium text-destructive">{state.fieldErrors.amount[0]}</p>
           )}

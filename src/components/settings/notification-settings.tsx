@@ -3,6 +3,7 @@
 import {
   BellIcon,
   CalendarClockIcon,
+  HandshakeIcon,
   type LucideIcon,
   Loader2Icon,
   MoonStarIcon,
@@ -32,6 +33,7 @@ type Prefs = {
   notifyDailyReminder: boolean;
   notifyMonthlySummary: boolean;
   notifyRecurring: boolean;
+  notifyDebts: boolean;
 };
 
 const PREF_ITEMS: {
@@ -57,6 +59,12 @@ const PREF_ITEMS: {
     icon: CalendarClockIcon,
     title: "الملخص الشهري",
     description: "في أول كل شهر: كم صرفت ومقارنة بالشهر السابق.",
+  },
+  {
+    key: "notifyDebts",
+    icon: HandshakeIcon,
+    title: "مواعيد الديون",
+    description: "تذكير يوم الاستحقاق واليوم الذي قبله.",
   },
   {
     key: "notifyRecurring",

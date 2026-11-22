@@ -124,6 +124,7 @@ async function Notifications() {
         notifyDailyReminder: user.notifyDailyReminder,
         notifyMonthlySummary: user.notifyMonthlySummary,
         notifyRecurring: user.notifyRecurring,
+        notifyDebts: user.notifyDebts,
       }}
     />
   );

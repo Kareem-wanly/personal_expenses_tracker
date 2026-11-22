@@ -25,7 +25,20 @@ export async function GET(request: NextRequest) {
   const [{ groups }, incomes] = await Promise.all([getExpenses({ month }), getMonthIncomes(month)]);
   // One sheet for the month: expenses and income, told apart by "النوع".
   // Amounts stay positive; the type column says which way the money went.
-  const header = ["التاريخ", "النوع", "التصنيف / المصدر", "المبلغ", "العملة", "طريقة الدفع", "ملاحظة"];
+  // Entries typed in another currency also carry what was actually typed.
+  const header = [
+    "التاريخ",
+    "النوع",
+    "التصنيف / المصدر",
+    "المبلغ",
+    "العملة",
+    "طريقة الدفع",
+    "ملاحظة",
+    "المبلغ الأصلي",
+    "العملة الأصلية",
+  ];
+  const original = (r: { originalAmount: number | null; originalCurrency: string | null }) =>
+    r.originalCurrency && r.originalAmount !== null ? [fromMinor(r.originalAmount), r.originalCurrency] : ["", ""];
   const rows: { date: string; cells: unknown[] }[] = [];
 
   for (const group of groups) {
@@ -40,6 +53,7 @@ export async function GET(request: NextRequest) {
           user.currency,
           PAYMENT_METHOD_LABELS[e.paymentMethod],
           e.note ?? "",
+          ...original(e),
         ],
       });
     }
@@ -47,7 +61,16 @@ export async function GET(request: NextRequest) {
   for (const i of incomes) {
     rows.push({
       date: i.date,
-      cells: [i.date, "دخل", INCOME_SOURCE_META[i.source].label, fromMinor(i.amount), user.currency, "", i.note ?? ""],
+      cells: [
+        i.date,
+        "دخل",
+        INCOME_SOURCE_META[i.source].label,
+        fromMinor(i.amount),
+        user.currency,
+        "",
+        i.note ?? "",
+        ...original(i),
+      ],
     });
   }
   rows.sort((a, b) => b.date.localeCompare(a.date));

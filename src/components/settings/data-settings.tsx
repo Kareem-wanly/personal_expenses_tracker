@@ -67,13 +67,23 @@ function RestoreRow() {
           toast.error(json.error ?? "تعذّرت الاستعادة");
           return;
         }
-        const r = json.result as { expenses: number; incomes: number; categories: number; recurring: number };
-        const added = r.expenses + r.incomes + r.categories + r.recurring;
-        toast.success(
-          added === 0
-            ? "النسخة مستعادة مسبقاً — لا شيء جديد"
-            : `تمت الاستعادة: ${countExpenses(r.expenses)}، و${r.incomes} دخل، و${r.categories} تصنيف`,
-        );
+        const r = json.result as {
+          expenses: number;
+          incomes: number;
+          categories: number;
+          recurring: number;
+          debts?: number;
+          goals?: number;
+        };
+        const added = r.expenses + r.incomes + r.categories + r.recurring + (r.debts ?? 0) + (r.goals ?? 0);
+        const parts = [
+          countExpenses(r.expenses),
+          `${r.incomes} دخل`,
+          `${r.categories} تصنيف`,
+          r.debts ? `${r.debts} دين` : null,
+          r.goals ? `${r.goals} هدف` : null,
+        ].filter(Boolean);
+        toast.success(added === 0 ? "النسخة مستعادة مسبقاً — لا شيء جديد" : `تمت الاستعادة: ${parts.join("، و")}`);
         router.refresh();
       } catch {
         toast.error("تعذّرت قراءة الملف");

@@ -25,7 +25,15 @@ export function IncomeItem({ item, currency, meta }: { item: IncomeRow; currency
         <div className="min-w-0 flex-1">
           <p className="truncate text-[16px] font-medium">{item.note || source.label}</p>
           <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
-            {[item.note ? source.label : null, meta].filter(Boolean).join(" · ")}
+            {[
+              item.note ? source.label : null,
+              meta,
+              item.originalCurrency && item.originalAmount !== null
+                ? formatMoney(item.originalAmount, item.originalCurrency)
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
         </div>
         <span className="shrink-0 text-[16px] font-semibold text-positive tabular">

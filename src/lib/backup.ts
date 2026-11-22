@@ -1,18 +1,25 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db";
 import {
+  DEBT_DIRECTIONS,
   FREQUENCIES,
   INCOME_SOURCES,
   PAYMENT_METHODS,
   RECURRING_KINDS,
   category,
+  debt,
+  debtPayment,
   expense,
+  goalContribution,
   income,
   recurringExpense,
+  savingGoal,
   user as userTable,
 } from "@/db/schema";
 import { CURRENCIES } from "@/lib/constants";
@@ -29,17 +36,25 @@ import { DATE_RE } from "@/lib/dates";
  */
 
 export const BACKUP_APP = "masroofi";
-export const BACKUP_VERSION = 1;
+/** v2 added debts, goals and original currencies (v1 files still restore). */
+export const BACKUP_VERSION = 2;
 
 const minor = z.number().int().min(0).max(100_000_000_000);
 const date = z.string().regex(DATE_RE);
 const id = z.string().min(1).max(64);
 const text = (max: number) => z.string().max(max).nullable();
 const currencyCodes = CURRENCIES.map((c) => c.code) as [string, ...string[]];
+const currencyCode = z.enum(currencyCodes);
+const timestamp = z.number().int().min(0).nullable();
+const original = {
+  originalAmount: minor.nullable().default(null),
+  originalCurrency: currencyCode.nullable().default(null),
+};
+const movement = z.object({ id, amount: z.number().int().min(-100_000_000_000).max(100_000_000_000), date, note: text(120) });
 
 export const backupSchema = z.object({
   app: z.literal(BACKUP_APP),
-  version: z.literal(BACKUP_VERSION),
+  version: z.union([z.literal(1), z.literal(BACKUP_VERSION)]),
   exportedAt: z.string(),
   settings: z.object({
     currency: z.enum(currencyCodes),
@@ -67,6 +82,7 @@ export const backupSchema = z.object({
         date,
         paymentMethod: z.enum(PAYMENT_METHODS),
         recurringId: id.nullable(),
+        ...original,
       }),
     )
     .max(200_000),
@@ -79,6 +95,7 @@ export const backupSchema = z.object({
         note: text(120),
         date,
         recurringId: id.nullable().default(null),
+        ...original,
       }),
     )
     .max(50_000),
@@ -99,12 +116,46 @@ export const backupSchema = z.object({
       }),
     )
     .max(1_000),
+  debts: z
+    .array(
+      z.object({
+        id,
+        direction: z.enum(DEBT_DIRECTIONS),
+        person: z.string().trim().min(1).max(60),
+        amount: minor,
+        currency: currencyCode,
+        note: text(120),
+        date,
+        dueDate: date.nullable(),
+        settledAt: timestamp,
+        payments: z.array(movement).max(1_000),
+      }),
+    )
+    .max(5_000)
+    .default([]),
+  goals: z
+    .array(
+      z.object({
+        id,
+        name: z.string().trim().min(1).max(40),
+        icon: z.string().min(1).max(8),
+        target: minor,
+        currency: currencyCode,
+        deadline: date.nullable(),
+        achievedAt: timestamp,
+        createdAt: z.number().int().min(0),
+        contributions: z.array(movement).max(5_000),
+      }),
+    )
+    .max(500)
+    .default([]),
 });
 
 export type Backup = z.infer<typeof backupSchema>;
+export type BackupInput = z.input<typeof backupSchema>;
 
 export async function buildBackup(userId: string): Promise<Backup> {
-  const [u, cats, exps, incs, recs] = await Promise.all([
+  const [u, cats, exps, incs, recs, debts, payments, goals, contributions] = await Promise.all([
     db.query.user.findFirst({
       where: eq(userTable.id, userId),
       columns: { currency: true, monthlyBudget: true },
@@ -129,6 +180,8 @@ export async function buildBackup(userId: string): Promise<Backup> {
         date: expense.date,
         paymentMethod: expense.paymentMethod,
         recurringId: expense.recurringId,
+        originalAmount: expense.originalAmount,
+        originalCurrency: expense.originalCurrency,
       })
       .from(expense)
       .where(eq(expense.userId, userId))
@@ -141,6 +194,8 @@ export async function buildBackup(userId: string): Promise<Backup> {
         note: income.note,
         date: income.date,
         recurringId: income.recurringId,
+        originalAmount: income.originalAmount,
+        originalCurrency: income.originalCurrency,
       })
       .from(income)
       .where(eq(income.userId, userId))
@@ -161,7 +216,19 @@ export async function buildBackup(userId: string): Promise<Backup> {
       })
       .from(recurringExpense)
       .where(eq(recurringExpense.userId, userId)),
+    db.select().from(debt).where(eq(debt.userId, userId)),
+    db.select().from(debtPayment).where(eq(debtPayment.userId, userId)).orderBy(debtPayment.date),
+    db.select().from(savingGoal).where(eq(savingGoal.userId, userId)),
+    db.select().from(goalContribution).where(eq(goalContribution.userId, userId)).orderBy(goalContribution.date),
   ]);
+  const move = (m: { id: string; amount: number; date: string; note: string | null }) => ({
+    id: m.id,
+    amount: m.amount,
+    date: m.date,
+    note: m.note,
+  });
+  const paymentsOf = Map.groupBy(payments, (p) => p.debtId);
+  const contributionsOf = Map.groupBy(contributions, (c) => c.goalId);
 
   return {
     app: BACKUP_APP,
@@ -172,13 +239,46 @@ export async function buildBackup(userId: string): Promise<Backup> {
     expenses: exps,
     incomes: incs,
     recurring: recs,
+    debts: debts.map((d) => ({
+      id: d.id,
+      direction: d.direction,
+      person: d.person,
+      amount: d.amount,
+      currency: d.currency,
+      note: d.note,
+      date: d.date,
+      dueDate: d.dueDate,
+      settledAt: d.settledAt?.getTime() ?? null,
+      payments: (paymentsOf.get(d.id) ?? []).map(move),
+    })),
+    goals: goals.map((g) => ({
+      id: g.id,
+      name: g.name,
+      icon: g.icon,
+      target: g.target,
+      currency: g.currency,
+      deadline: g.deadline,
+      achievedAt: g.achievedAt?.getTime() ?? null,
+      createdAt: g.createdAt.getTime(),
+      contributions: (contributionsOf.get(g.id) ?? []).map(move),
+    })),
   };
 }
 
 type Owned = { id: string; userId: string };
 
 /** Which of `ids` exist in a table, and who owns them. */
-async function owners(table: typeof expense | typeof income | typeof recurringExpense | typeof category, ids: string[]) {
+type OwnedTable =
+  | typeof expense
+  | typeof income
+  | typeof recurringExpense
+  | typeof category
+  | typeof debt
+  | typeof debtPayment
+  | typeof savingGoal
+  | typeof goalContribution;
+
+async function owners(table: OwnedTable, ids: string[]) {
   const found = new Map<string, string>();
   for (let i = 0; i < ids.length; i += 500) {
     const chunk = ids.slice(i, i + 500);
@@ -216,6 +316,28 @@ const expenseFp = (e: { date: string; amount: number; note: string | null; categ
 const incomeFp = (i: { date: string; amount: number; note: string | null; source: string }) =>
   [i.date, i.amount, i.note ?? "", i.source].join("|");
 
+/** Stable stand-in id for a backup id that another account already uses. */
+function derivedId(userId: string, backupId: string) {
+  const h = createHash("sha256").update(`${userId}:${backupId}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
+
+/**
+ * Final ids for restored rows: the backup's own id, or a derived one if
+ * another account owns it. Deterministic, so a second import of the same
+ * file hits the same ids and inserts nothing (ON CONFLICT DO NOTHING).
+ */
+async function finalIds(table: OwnedTable, userId: string, ids: string[]) {
+  const taken = await owners(table, ids);
+  return new Map(ids.map((i) => [i, taken.has(i) && taken.get(i) !== userId ? derivedId(userId, i) : i]));
+}
+
+async function insertCounted<T>(rows: T[], insert: (chunk: T[]) => Promise<{ rowsAffected: number }>) {
+  let n = 0;
+  for (let i = 0; i < rows.length; i += 400) n += (await insert(rows.slice(i, i + 400))).rowsAffected;
+  return n;
+}
+
 async function insertChunked<T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>) {
   for (let i = 0; i < rows.length; i += 400) await insert(rows.slice(i, i + 400));
 }
@@ -225,11 +347,13 @@ export type RestoreResult = {
   expenses: number;
   incomes: number;
   recurring: number;
+  debts: number;
+  goals: number;
   skipped: number;
 };
 
 export async function restoreBackup(userId: string, data: Backup): Promise<RestoreResult> {
-  const result: RestoreResult = { categories: 0, expenses: 0, incomes: 0, recurring: 0, skipped: 0 };
+  const result: RestoreResult = { categories: 0, expenses: 0, incomes: 0, recurring: 0, debts: 0, goals: 0, skipped: 0 };
 
   /** Keep the backup id unless another account already uses it. */
   const assign = (existing: Map<string, string>, backupId: string): string | null => {
@@ -374,7 +498,55 @@ export async function restoreBackup(userId: string, data: Backup): Promise<Resto
   await insertChunked(newIncs, (chunk) => db.insert(income).values(chunk).onConflictDoNothing());
   result.incomes = newIncs.length;
 
-  // 5) Settings: currency and budget give the amounts their meaning.
+  // 5) Debts and goals, with their payments / contributions.
+  const debtIds = await finalIds(debt, userId, data.debts.map((d) => d.id));
+  result.debts = await insertCounted(
+    data.debts.map((d) => ({
+      id: debtIds.get(d.id)!,
+      userId,
+      direction: d.direction,
+      person: d.person,
+      amount: d.amount,
+      currency: d.currency,
+      note: d.note,
+      date: d.date,
+      dueDate: d.dueDate,
+      settledAt: d.settledAt === null ? null : new Date(d.settledAt),
+    })),
+    (chunk) => db.insert(debt).values(chunk).onConflictDoNothing(),
+  );
+  const payments = data.debts.flatMap((d) => d.payments.map((p) => ({ ...p, debtId: debtIds.get(d.id)! })));
+  const paymentIds = await finalIds(debtPayment, userId, payments.map((p) => p.id));
+  await insertCounted(
+    payments.map((p) => ({ ...p, id: paymentIds.get(p.id)!, userId })),
+    (chunk) => db.insert(debtPayment).values(chunk).onConflictDoNothing(),
+  );
+
+  const goalIds = await finalIds(savingGoal, userId, data.goals.map((g) => g.id));
+  result.goals = await insertCounted(
+    data.goals.map((g) => ({
+      id: goalIds.get(g.id)!,
+      userId,
+      name: g.name,
+      icon: g.icon,
+      target: g.target,
+      currency: g.currency,
+      deadline: g.deadline,
+      achievedAt: g.achievedAt === null ? null : new Date(g.achievedAt),
+      createdAt: new Date(g.createdAt),
+    })),
+    (chunk) => db.insert(savingGoal).values(chunk).onConflictDoNothing(),
+  );
+  const contributions = data.goals.flatMap((g) =>
+    g.contributions.map((c) => ({ ...c, goalId: goalIds.get(g.id)! })),
+  );
+  const contributionIds = await finalIds(goalContribution, userId, contributions.map((c) => c.id));
+  await insertCounted(
+    contributions.map((c) => ({ ...c, id: contributionIds.get(c.id)!, userId })),
+    (chunk) => db.insert(goalContribution).values(chunk).onConflictDoNothing(),
+  );
+
+  // 6) Settings: currency and budget give the amounts their meaning.
   await db
     .update(userTable)
     .set({ currency: data.settings.currency, monthlyBudget: data.settings.monthlyBudget })

@@ -3,7 +3,18 @@ import "server-only";
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import { category, expense, income, passkey, pushSubscription, recurringExpense } from "@/db/schema";
+import {
+  category,
+  debt,
+  debtPayment,
+  expense,
+  goalContribution,
+  income,
+  passkey,
+  pushSubscription,
+  recurringExpense,
+  savingGoal,
+} from "@/db/schema";
 
 /**
  * Delete every row the app owns for a user. Run before Better Auth removes
@@ -15,6 +26,11 @@ import { category, expense, income, passkey, pushSubscription, recurringExpense 
  */
 export async function purgeUserData(userId: string) {
   await db.batch([
+    // Children before parents (payments → debts, contributions → goals).
+    db.delete(debtPayment).where(eq(debtPayment.userId, userId)),
+    db.delete(debt).where(eq(debt.userId, userId)),
+    db.delete(goalContribution).where(eq(goalContribution.userId, userId)),
+    db.delete(savingGoal).where(eq(savingGoal.userId, userId)),
     db.delete(expense).where(eq(expense.userId, userId)),
     db.delete(income).where(eq(income.userId, userId)),
     db.delete(recurringExpense).where(eq(recurringExpense.userId, userId)),

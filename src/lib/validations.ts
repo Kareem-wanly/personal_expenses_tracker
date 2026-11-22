@@ -1,18 +1,11 @@
 import { z } from "zod";
 
-import { FREQUENCIES, INCOME_SOURCES, PAYMENT_METHODS } from "@/db/schema";
+import { DEBT_DIRECTIONS, FREQUENCIES, INCOME_SOURCES, PAYMENT_METHODS } from "@/db/schema";
 import { CURRENCIES } from "@/lib/constants";
 import { DATE_RE } from "@/lib/dates";
+import { normalizeAmountInput } from "@/lib/money";
 
-/** Accepts "12.5", "12,5" and Arabic-Indic digits ("١٢٫٥"). */
-export function normalizeAmountInput(raw: string): string {
-  return raw
-    .trim()
-    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
-    .replace(/[٫,]/g, ".")
-    .replace(/[^\d.]/g, "");
-}
+export { normalizeAmountInput };
 
 const amount = z
   .string({ error: "أدخل المبلغ" })
@@ -36,6 +29,35 @@ const optionalAmount = z
     ]),
   );
 
+const currencyCodes = CURRENCIES.map((c) => c.code) as [string, ...string[]];
+const currencyCode = z.enum(currencyCodes, { error: "عملة غير مدعومة" });
+
+const isoDate = z.string().regex(DATE_RE, "تاريخ غير صالح");
+/** Optional `YYYY-MM-DD`: "" → null. */
+const optionalDate = z
+  .string()
+  .optional()
+  .transform((v) => (v ? v : null))
+  .pipe(z.union([z.null(), isoDate]));
+
+/**
+ * Entry typed in another currency: which one, and how many units of the
+ * user's currency one unit is worth. Both absent = the user's currency.
+ */
+const foreignMoney = {
+  currency: currencyCode.optional(),
+  rate: z
+    .string()
+    .optional()
+    .transform((v) => (v ? normalizeAmountInput(v) : ""))
+    .pipe(
+      z.union([
+        z.literal("").transform(() => null),
+        z.coerce.number<string>({ error: "سعر صرف غير صالح" }).positive("سعر صرف غير صالح").max(10_000_000),
+      ]),
+    ),
+};
+
 const optionalText = (max: number) =>
   z
     .string()
@@ -56,6 +78,7 @@ export const expenseSchema = z.object({
   paymentMethod: z.enum(PAYMENT_METHODS).default("cash"),
   /** New expenses only: also create a recurring rule from this one. */
   repeat: z.enum(["none", ...FREQUENCIES]).default("none"),
+  ...foreignMoney,
 });
 
 export const incomeSchema = z.object({
@@ -66,6 +89,7 @@ export const incomeSchema = z.object({
   note: optionalText(120),
   /** New income only: also create a recurring rule (e.g. monthly salary). */
   repeat: z.enum(["none", ...FREQUENCIES]).default("none"),
+  ...foreignMoney,
 });
 
 export const recurringSchema = z.object({
@@ -105,12 +129,49 @@ export const categorySchema = z.object({
   budget: optionalAmount,
 });
 
-const currencyCodes = CURRENCIES.map((c) => c.code) as [string, ...string[]];
-
 export const settingsSchema = z.object({
   name: z.string().trim().min(1, "أدخل الاسم").max(50),
   currency: z.enum(currencyCodes),
   monthlyBudget: optionalAmount,
+});
+
+/* ----------------------------- Debts & goals ------------------------------ */
+
+export const debtSchema = z.object({
+  id: z.string().optional(),
+  direction: z.enum(DEBT_DIRECTIONS),
+  person: z.string().trim().min(1, "أدخل اسم الشخص").max(60, "الاسم طويل جداً"),
+  amount,
+  currency: currencyCode,
+  date: isoDate,
+  dueDate: optionalDate,
+  note: optionalText(120),
+});
+
+export const debtPaymentSchema = z.object({
+  debtId: z.string().min(1),
+  amount,
+  date: isoDate,
+  note: optionalText(120),
+});
+
+export const goalSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(1, "أدخل اسم الهدف").max(40, "الاسم طويل جداً"),
+  icon: z.string().min(1).max(8),
+  target: amount,
+  currency: currencyCode,
+  deadline: optionalDate,
+  /** New goals only: what's already put aside. */
+  initial: optionalAmount,
+});
+
+export const contributionSchema = z.object({
+  goalId: z.string().min(1),
+  kind: z.enum(["deposit", "withdraw"]),
+  amount,
+  date: isoDate,
+  note: optionalText(120),
 });
 
 export type ActionState = {

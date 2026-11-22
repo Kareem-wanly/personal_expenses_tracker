@@ -1,18 +1,20 @@
 import { timingSafeEqual } from "node:crypto";
 
-import { and, eq, lte } from "drizzle-orm";
+import { and, eq, inArray, isNull, lte, sum } from "drizzle-orm";
 import { type NextRequest } from "next/server";
 
 import { db } from "@/db";
-import { category, pushSubscription, recurringExpense, user } from "@/db/schema";
+import { category, debt, debtPayment, pushSubscription, recurringExpense, user } from "@/db/schema";
 import { addDays, todayISO } from "@/lib/dates";
 import { env } from "@/lib/env";
 import {
   dailyReminder,
+  debtReminder,
   hasExpenseOn,
   monthlySummary,
   recurringReminder,
 } from "@/lib/notifications";
+import { daysBetween } from "@/lib/plans";
 import { pushEnabled, sendPushToUser } from "@/lib/push";
 import { materializeRecurring } from "@/lib/recurring";
 
@@ -50,6 +52,7 @@ export async function GET(request: NextRequest) {
     summaries: 0,
     reminders: 0,
     recurringReminders: 0,
+    debtReminders: 0,
     failed: 0,
   };
 
@@ -85,6 +88,7 @@ export async function GET(request: NextRequest) {
       notifyDailyReminder: user.notifyDailyReminder,
       notifyMonthlySummary: user.notifyMonthlySummary,
       notifyRecurring: user.notifyRecurring,
+      notifyDebts: user.notifyDebts,
     })
     .from(user)
     .innerJoin(pushSubscription, eq(pushSubscription.userId, user.id));
@@ -122,6 +126,43 @@ export async function GET(request: NextRequest) {
           );
         if (tomorrow.length && (await sendPushToUser(u.id, recurringReminder(tomorrow, u.currency)))) {
           stats.recurringReminders++;
+        }
+      }
+
+      if (u.notifyDebts) {
+        // Unsettled debts due today or tomorrow, with what's left on each.
+        const due = await db
+          .select({
+            id: debt.id,
+            direction: debt.direction,
+            person: debt.person,
+            amount: debt.amount,
+            currency: debt.currency,
+            dueDate: debt.dueDate,
+          })
+          .from(debt)
+          .where(
+            and(
+              eq(debt.userId, u.id),
+              isNull(debt.settledAt),
+              inArray(debt.dueDate, [today, addDays(today, 1)]),
+            ),
+          );
+        if (due.length) {
+          const paid = await db
+            .select({ debtId: debtPayment.debtId, total: sum(debtPayment.amount).mapWith(Number) })
+            .from(debtPayment)
+            .where(inArray(debtPayment.debtId, due.map((d) => d.id)))
+            .groupBy(debtPayment.debtId);
+          const paidOf = new Map(paid.map((p) => [p.debtId, p.total ?? 0]));
+          const items = due
+            .map((d) => ({
+              ...d,
+              remaining: d.amount - (paidOf.get(d.id) ?? 0),
+              dueIn: daysBetween(today, d.dueDate!),
+            }))
+            .filter((d) => d.remaining > 0);
+          if (items.length && (await sendPushToUser(u.id, debtReminder(items)))) stats.debtReminders++;
         }
       }
     } catch (err) {

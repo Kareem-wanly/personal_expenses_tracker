@@ -132,6 +132,21 @@ export function recurringReminder(
   };
 }
 
+/** Morning-of / day-before reminder for debts that fall due. */
+export function debtReminder(
+  items: { direction: "lent" | "borrowed"; person: string; remaining: number; currency: string; dueIn: number }[],
+): PushPayload {
+  const line = (d: (typeof items)[number]) =>
+    `${d.direction === "lent" ? `لك عند ${d.person}` : `عليك لـ ${d.person}`} ${formatMoney(d.remaining, d.currency)}`;
+  const when = items.every((d) => d.dueIn === 0) ? "اليوم" : items.every((d) => d.dueIn === 1) ? "غداً" : "قريباً";
+  return {
+    title: items.length === 1 ? `🤝 موعد سداد ${when}` : `🤝 ${items.length} ديون تستحق ${when}`,
+    body: items.slice(0, 3).map(line).join("، ") + ".",
+    url: "/debts",
+    tag: "debts-due",
+  };
+}
+
 export async function hasExpenseOn(userId: string, date: string) {
   const row = await db.query.expense.findFirst({
     where: and(eq(expense.userId, userId), eq(expense.date, date)),
