@@ -18,6 +18,7 @@ import { Group, RowButton } from "@/components/ui/grouped-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { APP_NAME } from "@/lib/constants";
 import { googleEnabled } from "@/lib/env";
+import { pushEnabled } from "@/lib/push";
 import { requireUser } from "@/lib/dal";
 import { signOutAction } from "@/server/actions";
 import { getCategories, getCategoriesWithUsage, getRecurring } from "@/server/queries";
@@ -119,6 +120,7 @@ async function Notifications() {
   const user = await requireUser();
   return (
     <NotificationSettings
+      serverReady={pushEnabled}
       prefs={{
         notifyBudget: user.notifyBudget,
         notifyDailyReminder: user.notifyDailyReminder,

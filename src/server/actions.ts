@@ -26,7 +26,7 @@ import {
   categoryMonthTotal,
   monthTotal,
 } from "@/lib/notifications";
-import { pushEnabled, sendPushToUser } from "@/lib/push";
+import { pushEnabled, pushToUser, sendPushToUser } from "@/lib/push";
 import { exchangeRate } from "@/lib/rates";
 import { FREQUENCY_LABELS, dueOccurrences, nextOccurrence } from "@/lib/recurrence";
 import { countExpenses } from "@/lib/plural";
@@ -554,17 +554,39 @@ export async function updateNotificationPrefs(
   return { ok: true, message: "تم حفظ تفضيلات الإشعارات" };
 }
 
-export async function sendTestNotification(): Promise<ActionState> {
+export type TestPushResult = ActionState & {
+  /** Why it failed, so the device can repair itself when it can. */
+  reason?: "server-off" | "not-registered" | "expired" | "key-mismatch" | "push-error";
+};
+
+/** Send a test notification to this device (by its endpoint) and say exactly what went wrong. */
+export async function sendTestNotification(endpoint?: string): Promise<TestPushResult> {
   const user = await requireUser();
-  const sent = await sendPushToUser(user.id, {
-    title: "🔔 الإشعارات تعمل",
-    body: "هكذا ستصلك تنبيهات الميزانية والتذكير اليومي والملخص الشهري.",
-    url: "/settings",
-    tag: "test",
-  });
-  return sent > 0
-    ? { ok: true, message: "تم إرسال إشعار تجريبي" }
-    : { ok: false, message: "لا يوجد جهاز مشترك لاستقبال الإشعارات" };
+  if (!pushEnabled) {
+    return {
+      ok: false,
+      reason: "server-off",
+      message: "الإشعارات معطّلة على الخادم: مفاتيح VAPID غير مضبوطة في إعدادات Vercel.",
+    };
+  }
+  const r = await pushToUser(
+    user.id,
+    {
+      title: "🔔 الإشعارات تعمل",
+      body: "هكذا ستصلك تنبيهات الميزانية والتذكير اليومي والملخص الشهري.",
+      url: "/settings",
+      tag: "test",
+    },
+    endpoint,
+  );
+  if (r.sent > 0) return { ok: true, message: "تم إرسال إشعار تجريبي" };
+  if (r.devices === 0) return { ok: false, reason: "not-registered", message: "هذا الجهاز غير مسجّل على الخادم" };
+  if (r.expired) return { ok: false, reason: "expired", message: "انتهى اشتراك هذا الجهاز" };
+  if (r.failed.some((s) => s === 400 || s === 401 || s === 403)) {
+    return { ok: false, reason: "key-mismatch", message: "مفاتيح الإشعارات تغيّرت منذ تفعيل هذا الجهاز" };
+  }
+  const code = r.failed[0] ? ` (${r.failed[0]})` : "";
+  return { ok: false, reason: "push-error", message: `رفضت خدمة الإشعارات الرسالة${code}` };
 }
 
 export async function signOutAction() {

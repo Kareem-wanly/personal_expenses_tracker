@@ -45,7 +45,16 @@ function goalHint(g: GoalRow) {
   return `بقي ${formatMoney(s.remaining, g.currency)}`;
 }
 
-export function GoalsView({ goals, currency }: { goals: GoalRow[]; currency: string }) {
+export function GoalsView({
+  goals,
+  currency,
+  approxSaved,
+}: {
+  goals: GoalRow[];
+  currency: string;
+  /** Savings across currencies in the user's currency (null = not needed / unavailable). */
+  approxSaved: number | null;
+}) {
   const [sheet, setSheet] = useState<Sheet>(null);
   const current = sheet && sheet.kind !== "new" ? goals.find((g) => g.id === sheet.id) : undefined;
   const saved = new Map<string, number>();
@@ -98,6 +107,7 @@ export function GoalsView({ goals, currency }: { goals: GoalRow[]; currency: str
                   {
                     label: "مدّخر لأهدافك",
                     value: [...saved].map(([c, t]) => formatMoney(t, c)).join(" · ") || "—",
+                    hint: approxSaved !== null ? `≈ ${formatMoney(approxSaved, currency)} بسعر اليوم` : undefined,
                   },
                   { label: "أهداف تحقّقت", value: `${achieved} من ${goals.length}`, tone: achieved ? "positive" : "muted" },
                 ]}

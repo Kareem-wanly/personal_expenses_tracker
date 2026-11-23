@@ -103,7 +103,7 @@ export function RecurringManager({
                   : `${FREQUENCY_LABELS[r.frequency]} · متوقف مؤقتاً`
               }
               trailing={
-                <span className={`text-[15px] font-semibold tabular ${r.kind === "income" ? "text-positive" : ""}`}>
+                <span className={`text-[15px] font-semibold tabular ${r.kind === "income" ? "text-positive" : ""}`} dir="ltr">
                   {r.kind === "income" ? "+" : ""}
                   {formatMoney(r.amount, currency)}
                 </span>

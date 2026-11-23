@@ -107,6 +107,34 @@ export async function enablePush(): Promise<EnableResult> {
   }
 }
 
+const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i]);
+
+/**
+ * Make sure this device's subscription matches the current VAPID key and is
+ * registered to the signed-in account on the server. Re-subscribes when the
+ * key changed (or when `force`), since the push service rejects messages
+ * signed with a different key. Silent: returns the subscription or null.
+ */
+export async function syncPush(opts: { force?: boolean } = {}): Promise<PushSubscription | null> {
+  if (!VAPID_PUBLIC_KEY || !("serviceWorker" in navigator) || Notification.permission !== "granted") return null;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) return null;
+    const want = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+    const key = sub.options.applicationServerKey;
+    if (opts.force || !key || !sameBytes(new Uint8Array(key), want)) {
+      await sub.unsubscribe().catch(() => {});
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: want });
+    }
+    const res = await subscribePush(sub.toJSON(), Intl.DateTimeFormat().resolvedOptions().timeZone);
+    return res.ok ? sub : null;
+  } catch (err) {
+    console.error("[push] sync failed", err);
+    return null;
+  }
+}
+
 /** Small helper for "remind me later" with an expiry. */
 export function useSnooze(key: string, days: number) {
   const [snoozedNow, setSnoozedNow] = useState(false);

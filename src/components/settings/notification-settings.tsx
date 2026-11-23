@@ -11,7 +11,7 @@ import {
   SendIcon,
   TriangleAlertIcon,
 } from "lucide-react";
-import { useState, useSyncExternalStore, useTransition } from "react";
+import { useEffect, useState, useSyncExternalStore, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Group, Row, RowButton, RowIcon } from "@/components/ui/grouped-list";
@@ -20,6 +20,7 @@ import {
   type PushSupport,
   VAPID_PUBLIC_KEY,
   enablePush,
+  syncPush,
   usePushState,
 } from "@/lib/push-client";
 import {
@@ -76,7 +77,7 @@ const PREF_ITEMS: {
 
 const noop = () => () => {};
 
-export function NotificationSettings({ prefs: initialPrefs }: { prefs: Prefs }) {
+export function NotificationSettings({ prefs: initialPrefs, serverReady }: { prefs: Prefs; serverReady: boolean }) {
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   const { support, permission, subscription, setPermission, setSubscription } =
     usePushState();
@@ -108,11 +109,33 @@ export function NotificationSettings({ prefs: initialPrefs }: { prefs: Prefs }) 
     });
   }
 
+  // Heal silently on open: re-register this device (and re-subscribe if the
+  // server's key changed), so a stale subscription never looks "on".
+  useEffect(() => {
+    if (!serverReady || !subscription) return;
+    let cancelled = false;
+    syncPush().then((sub) => {
+      if (!cancelled && sub && sub.endpoint !== subscription.endpoint) setSubscription(sub);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [serverReady, subscription, setSubscription]);
+
   function test() {
     startTransition(async () => {
-      const res = await sendTestNotification();
+      let res = await sendTestNotification(subscription?.endpoint);
+      // Fixable on this device: subscribe again with the current key and retry once.
+      if (!res.ok && (res.reason === "not-registered" || res.reason === "expired" || res.reason === "key-mismatch")) {
+        const fresh = await syncPush({ force: true });
+        if (fresh) {
+          setSubscription(fresh);
+          res = await sendTestNotification(fresh.endpoint);
+          if (res.ok) res = { ...res, message: "أُعيد تسجيل الجهاز وأُرسل الإشعار" };
+        }
+      }
       if (res.ok) toast.success(res.message);
-      else toast.error(res.message);
+      else toast.error(res.message, { duration: 8000 });
     });
   }
 
@@ -132,13 +155,14 @@ export function NotificationSettings({ prefs: initialPrefs }: { prefs: Prefs }) 
     return <div className="h-48 animate-pulse rounded-[22px] bg-foreground/[0.07] dark:bg-white/[0.09]" />;
   }
 
-  const ready = support === "supported" && !!VAPID_PUBLIC_KEY && permission !== "denied";
+  const ready = serverReady && support === "supported" && !!VAPID_PUBLIC_KEY && permission !== "denied";
 
   return (
     <Group
       header="الإشعارات"
       footer={
         <DeviceHint
+          serverReady={serverReady}
           support={support}
           permission={permission}
           configured={!!VAPID_PUBLIC_KEY}
@@ -195,11 +219,13 @@ export function NotificationSettings({ prefs: initialPrefs }: { prefs: Prefs }) 
 
 /** Why notifications can't be turned on here, in the group footer. */
 function DeviceHint({
+  serverReady,
   support,
   permission,
   configured,
   subscribed,
 }: {
+  serverReady: boolean;
   support: PushSupport;
   permission: NotificationPermission;
   configured: boolean;
@@ -215,7 +241,14 @@ function DeviceHint({
   }
   if (support === "unsupported") return <>هذا المتصفح لا يدعم الإشعارات.</>;
   if (support === "no-sw") return <>الإشعارات متاحة في النسخة المنشورة من التطبيق فقط.</>;
-  if (!configured) return <>الإشعارات غير مهيّأة على الخادم بعد (مفاتيح VAPID).</>;
+  if (!configured || !serverReady) {
+    return (
+      <>
+        الإشعارات غير مهيّأة على الخادم: مفاتيح VAPID ناقصة أو غير صالحة في إعدادات Vercel
+        {configured ? " (المفتاح الخاص VAPID_PRIVATE_KEY)" : ""}. بعد تصحيحها أعد النشر.
+      </>
+    );
+  }
   if (permission === "denied") {
     return (
       <>

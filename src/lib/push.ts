@@ -56,20 +56,30 @@ function configureVapid(): boolean {
 
 export const pushEnabled = configureVapid();
 
-/**
- * Send a notification to every device of a user. Expired subscriptions
- * (404/410 from the push service) are deleted automatically.
- * Returns how many devices accepted the message.
- */
-export async function sendPushToUser(userId: string, payload: PushPayload) {
-  if (!pushEnabled) return 0;
+export type PushReport = {
+  /** Devices registered for the user. */
+  devices: number;
+  /** Devices whose push service accepted the message. */
+  sent: number;
+  /** Subscriptions the push service no longer knows (removed). */
+  expired: number;
+  /** HTTP status of every other failure, e.g. 403 = VAPID key mismatch. */
+  failed: number[];
+};
 
-  const subs = await db
-    .select()
-    .from(pushSubscription)
-    .where(eq(pushSubscription.userId, userId));
+/**
+ * Send a notification to every device of a user (or only `endpoint`), and
+ * report what happened. Expired subscriptions (404/410) are deleted.
+ */
+export async function pushToUser(userId: string, payload: PushPayload, endpoint?: string): Promise<PushReport> {
+  if (!pushEnabled) return { devices: 0, sent: 0, expired: 0, failed: [] };
+
+  const subs = (
+    await db.select().from(pushSubscription).where(eq(pushSubscription.userId, userId))
+  ).filter((s) => !endpoint || s.endpoint === endpoint);
 
   const expired: string[] = [];
+  const failed: number[] = [];
   const results = await Promise.allSettled(
     subs.map((s) =>
       sendNotification(
@@ -77,8 +87,9 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
           JSON.stringify(payload),
           { TTL: 60 * 60 * 24, urgency: "normal" },
         )
-        .catch((err: { statusCode?: number }) => {
+        .catch((err: { statusCode?: number; body?: string }) => {
           if (err.statusCode === 404 || err.statusCode === 410) expired.push(s.id);
+          else failed.push(err.statusCode ?? 0);
           throw err;
         }),
     ),
@@ -88,9 +99,20 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
     await db.delete(pushSubscription).where(inArray(pushSubscription.id, expired));
   }
   for (const r of results) {
-    if (r.status === "rejected" && !expired.length) {
-      console.error("[push] send failed:", r.reason);
+    if (r.status === "rejected") {
+      const e = r.reason as { statusCode?: number; body?: string };
+      console.error(`[push] send failed: ${e.statusCode ?? "?"} ${String(e.body ?? r.reason).slice(0, 200)}`);
     }
   }
-  return results.filter((r) => r.status === "fulfilled").length;
+  return {
+    devices: subs.length,
+    sent: results.filter((r) => r.status === "fulfilled").length,
+    expired: expired.length,
+    failed,
+  };
+}
+
+/** Send to every device of a user; returns how many accepted it. */
+export async function sendPushToUser(userId: string, payload: PushPayload) {
+  return (await pushToUser(userId, payload)).sent;
 }

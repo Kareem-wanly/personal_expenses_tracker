@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { type DebtDirection, debt, debtPayment, goalContribution, savingGoal } from "@/db/schema";
 import { requireUser } from "@/lib/dal";
 import { type DebtState, type GoalState, debtState, goalState, totalsByCurrency } from "@/lib/plans";
+import { exchangeRate } from "@/lib/rates";
 
 /* Each query resolves the user itself (DAL pattern). Data per user is small
    (dozens of rows), so lists load everything and group in memory. */
@@ -123,6 +124,18 @@ export async function getGoals(today: string): Promise<GoalRow[]> {
       };
     })
     .sort((a, b) => Number(a.state.achieved) - Number(b.state.achieved));
+}
+
+/**
+ * One approximate figure in the user's currency for amounts held in several
+ * currencies (e.g. "100 $ · 50 €" ≈ 160 $). Null when there's nothing to
+ * convert, or a rate is unavailable (never show a half-converted sum).
+ */
+export async function approxTotal(totals: { currency: string; total: number }[], main: string) {
+  if (!totals.length || totals.every((t) => t.currency === main)) return null;
+  const rates = await Promise.all(totals.map((t) => exchangeRate(t.currency, main)));
+  if (rates.some((r) => r === null)) return null;
+  return Math.round(totals.reduce((sum, t, i) => sum + t.total * rates[i]!, 0));
 }
 
 /** Compact numbers for the home screen tiles. */

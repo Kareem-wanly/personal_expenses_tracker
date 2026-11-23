@@ -5,7 +5,7 @@
  */
 export const TABS = [
   { href: "/", label: "الرئيسية" },
-  { href: "/expenses", label: "المصاريف" },
+  { href: "/expenses", label: "السجلّ" },
   { href: "/reports", label: "التقارير" },
   { href: "/settings", label: "الإعدادات" },
 ] as const;

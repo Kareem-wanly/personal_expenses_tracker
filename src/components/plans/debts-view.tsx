@@ -57,7 +57,16 @@ function totals(debts: DebtRow[]) {
   return [...map].map(([currency, total]) => ({ currency, total }));
 }
 
-export function DebtsView({ debts, currency }: { debts: DebtRow[]; currency: string }) {
+export function DebtsView({
+  debts,
+  currency,
+  approx,
+}: {
+  debts: DebtRow[];
+  currency: string;
+  /** Mixed currencies, converted to the user's at today's rate (null = not needed / unavailable). */
+  approx: { owedToMe: number | null; iOwe: number | null };
+}) {
   const [sheet, setSheet] = useState<Sheet>(null);
   const open = debts.filter((d) => !d.state.settled);
   const lent = open.filter((d) => d.direction === "lent");
@@ -109,8 +118,18 @@ export function DebtsView({ debts, currency }: { debts: DebtRow[]; currency: str
             <div className="surface px-4 py-4">
               <LedgerRows
                 rows={[
-                  { label: "لك عند الآخرين", value: moneyList(totals(lent)), tone: lent.length ? "positive" : "muted" },
-                  { label: "عليك للآخرين", value: moneyList(totals(borrowed)), tone: borrowed.length ? "negative" : "muted" },
+                  {
+                    label: "لك عند الآخرين",
+                    value: moneyList(totals(lent)),
+                    tone: lent.length ? "positive" : "muted",
+                    hint: approx.owedToMe !== null ? `≈ ${formatMoney(approx.owedToMe, currency)} بسعر اليوم` : undefined,
+                  },
+                  {
+                    label: "عليك للآخرين",
+                    value: moneyList(totals(borrowed)),
+                    tone: borrowed.length ? "negative" : "muted",
+                    hint: approx.iOwe !== null ? `≈ ${formatMoney(approx.iOwe, currency)} بسعر اليوم` : undefined,
+                  },
                   ...(overdue
                     ? [{ label: "متأخرة عن موعدها", value: String(overdue), tone: "warning" as const }]
                     : []),
