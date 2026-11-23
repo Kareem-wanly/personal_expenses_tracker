@@ -40,6 +40,11 @@ mkdirSync(PROJECT, { recursive: true });
 await new TwaGenerator().createTwaProject(PROJECT, manifest, new ConsoleLog("twa"));
 writeFileSync(join(PROJECT, "local.properties"), `sdk.dir=${SDK.replaceAll("\\", "\\\\")}\n`);
 
+// Keep enableSiteSettingsShortcut on: when false, Bubblewrap drops
+// ManageDataLauncherActivity from the manifest but LauncherActivity still
+// toggles it → "Component class … does not exist" crash on every launch.
+if (!manifest.enableSiteSettingsShortcut) throw new Error("enableSiteSettingsShortcut must stay true (crashes on launch)");
+
 const env = { ...process.env, JAVA_HOME: JDK, ANDROID_HOME: SDK, ANDROID_SDK_ROOT: SDK };
 const run = (file, args, cwd = PROJECT) => execFileSync(file, args, { cwd, env, stdio: "inherit", shell: true });
 

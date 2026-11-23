@@ -16,8 +16,8 @@
   "iconUrl": "https://personal-expenses-tracker-beta.vercel.app/icons/icon-512.png",
   "maskableIconUrl": "https://personal-expenses-tracker-beta.vercel.app/icons/maskable-512.png",
   "splashScreenFadeOutDuration": 300,
-  "appVersionName": "1.0.0",
-  "appVersionCode": 1,
+  "appVersionName": "1.0.1",
+  "appVersionCode": 2,
   "shortcuts": [
     {
       "name": "إضافة مصروف",
@@ -39,7 +39,7 @@
   "alphaDependencies": {
     "enabled": false
   },
-  "enableSiteSettingsShortcut": false,
+  "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
   "fullScopeUrl": "https://personal-expenses-tracker-beta.vercel.app/",
@@ -52,5 +52,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "1.0.0"
+  "appVersion": "1.0.1"
 }
