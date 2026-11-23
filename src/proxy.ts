@@ -28,7 +28,8 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Skip API, Next internals, PWA assets and static files.
-    "/((?!api|_next/static|_next/image|serwist|~offline|manifest.webmanifest|icons|favicon.ico|.*\\.(?:png|svg|ico|webp|jpg|txt|xml)$).*)",
+    // Skip API, Next internals, PWA assets, static files, the Android app
+    // download and Digital Asset Links (Android must read it signed out).
+    "/((?!api|_next/static|_next/image|serwist|~offline|manifest.webmanifest|icons|download|\\.well-known|favicon.ico|.*\\.(?:png|svg|ico|webp|jpg|txt|xml|json|apk)$).*)",
   ],
 };

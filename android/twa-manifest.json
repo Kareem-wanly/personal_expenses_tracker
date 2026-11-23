@@ -1,0 +1,56 @@
+{
+  "packageId": "app.masrufi.android",
+  "host": "personal-expenses-tracker-beta.vercel.app",
+  "name": "مصروفي — متتبّع المصاريف",
+  "launcherName": "مصروفي",
+  "display": "standalone",
+  "themeColor": "#1a1915",
+  "themeColorDark": "#1a1915",
+  "navigationColor": "#1a1915",
+  "navigationColorDark": "#1a1915",
+  "navigationDividerColor": "#1a1915",
+  "navigationDividerColorDark": "#1a1915",
+  "backgroundColor": "#1a1915",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://personal-expenses-tracker-beta.vercel.app/icons/icon-512.png",
+  "maskableIconUrl": "https://personal-expenses-tracker-beta.vercel.app/icons/maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "إضافة مصروف",
+      "shortName": "إضافة",
+      "url": "https://personal-expenses-tracker-beta.vercel.app/?add=1",
+      "chosenIconUrl": "https://personal-expenses-tracker-beta.vercel.app/icons/icon-192.png"
+    },
+    {
+      "name": "التقرير الشهري",
+      "shortName": "التقرير",
+      "url": "https://personal-expenses-tracker-beta.vercel.app/reports",
+      "chosenIconUrl": "https://personal-expenses-tracker-beta.vercel.app/icons/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-core",
+  "webManifestUrl": "https://personal-expenses-tracker-beta.vercel.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://personal-expenses-tracker-beta.vercel.app/",
+  "minSdkVersion": 24,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "1.0.0"
+}

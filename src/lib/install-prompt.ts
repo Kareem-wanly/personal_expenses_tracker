@@ -62,6 +62,7 @@ export function useInstallPrompt() {
     (window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as Navigator & { standalone?: boolean }).standalone === true);
   const ios = mounted && /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const android = mounted && /android/i.test(navigator.userAgent);
 
   return {
     mounted,
@@ -71,5 +72,7 @@ export function useInstallPrompt() {
     canPrompt: !!s.deferred,
     /** iOS has no install API: users must use Share → Add to Home Screen. */
     ios,
+    /** Android can also sideload our APK (a Trusted Web Activity wrapper). */
+    android,
   };
 }

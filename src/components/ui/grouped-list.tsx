@@ -105,3 +105,17 @@ export function RowButton({
     </button>
   );
 }
+
+/** Row that is a plain link (e.g. a file download). */
+export function RowAnchor({
+  className,
+  href,
+  download,
+  ...content
+}: RowContent & { className?: string; href: string; download?: string }) {
+  return (
+    <a href={href} download={download} className={cn(rowBase, pressable, className)}>
+      <Body {...content} />
+    </a>
+  );
+}

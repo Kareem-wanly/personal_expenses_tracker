@@ -1,6 +1,9 @@
 import type { IncomeSource, PaymentMethod } from "@/db/schema";
 
 export const APP_NAME = "مصروفي";
+/** The Android app (TWA wrapper of this site), served from /public. */
+export const ANDROID_APK_URL = "/download/masrufi.apk";
+
 export const APP_DESCRIPTION = "تتبّع مصاريفك اليومية بسهولة واحصل على تقارير شهرية واضحة";
 
 export const DEFAULT_CATEGORIES = [
