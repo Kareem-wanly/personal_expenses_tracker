@@ -1,4 +1,4 @@
-import webpush from "web-push";
+import { sendNotification, setVapidDetails } from "web-push";
 
 import type { PushPayload } from "@masrufi/core/notifications";
 
@@ -22,7 +22,7 @@ export class WebPushSender implements PushSender {
 
   constructor(subject: string, publicKey: string, privateKey: string) {
     this.vapidDetails = { subject, publicKey, privateKey };
-    webpush.setVapidDetails(subject, publicKey, privateKey); // throws on malformed keys
+    setVapidDetails(subject, publicKey, privateKey); // throws on malformed keys
   }
 
   async send(device: Device, payload: PushPayload): Promise<Delivery> {
@@ -31,7 +31,7 @@ export class WebPushSender implements PushSender {
     const { vapidDetails } = this;
     const options = { TTL: ONE_DAY, urgency: "normal" as const, timeout: 10_000, vapidDetails };
     try {
-      await webpush.sendNotification(subscription, JSON.stringify(payload), options);
+      await sendNotification(subscription, JSON.stringify(payload), options);
       return { result: "sent" };
     } catch (error) {
       const status = (error as { statusCode?: number }).statusCode ?? 0;
