@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 import { daysInMonth, formatDayLabel, monthOf, parseISODate } from "@masrufi/core/dates";
 
+import { PressableScale } from "@/motion/pressable-scale";
+import { durations } from "@/motion/tokens";
 import { radius, useColors } from "@/theme/theme";
 import { Card } from "@/ui/card";
 import { MonthSwitcher } from "@/ui/month-switcher";
@@ -25,7 +28,7 @@ export function Calendar({ value, onChange }: Props) {
   return (
     <Card>
       <MonthSwitcher month={month} onChange={setMonth} />
-      <View style={styles.grid}>
+      <Animated.View key={month} entering={FadeIn.duration(durations.normal)} style={styles.grid}>
         {WEEKDAYS.map((name) => (
           <Text key={name} variant="small" color="muted" style={styles.weekday}>{name}</Text>
         ))}
@@ -35,7 +38,8 @@ export function Calendar({ value, onChange }: Props) {
         {days.map((day) => {
           const selected = day === value;
           return (
-            <Pressable
+            <PressableScale
+              to={0.8}
               key={day}
               accessibilityRole="button"
               accessibilityLabel={formatDayLabel(day, "")}
@@ -44,10 +48,10 @@ export function Calendar({ value, onChange }: Props) {
               style={[styles.cell, selected && { backgroundColor: colors.ink }]}
             >
               <Text color={selected ? "onInk" : "text"}>{Number(day.slice(8))}</Text>
-            </Pressable>
+            </PressableScale>
           );
         })}
-      </View>
+      </Animated.View>
     </Card>
   );
 }

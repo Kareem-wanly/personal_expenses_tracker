@@ -1,5 +1,6 @@
 import { authClient } from "@/api/auth";
 import { useProfile } from "@/api/queries";
+import { Reveal } from "@/motion/reveal";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { QueryView } from "@/ui/query-view";
@@ -14,11 +15,13 @@ export function MoreScreen() {
       <Text variant="title" accessibilityRole="header">المزيد</Text>
       <QueryView query={profile}>
         {(me) => (
-          <Card>
+          <Reveal>
+            <Card>
             <Text variant="heading">{me.name}</Text>
             <Text color="muted">{me.email}</Text>
             <Text color="muted">العملة: {me.currency}</Text>
-          </Card>
+            </Card>
+          </Reveal>
         )}
       </QueryView>
       <Button label="تسجيل الخروج" kind="danger" onPress={() => void authClient.signOut()} />

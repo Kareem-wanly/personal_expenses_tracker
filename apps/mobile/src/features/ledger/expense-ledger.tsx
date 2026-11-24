@@ -35,9 +35,10 @@ export function ExpenseLedger({ month, today, currency }: Props) {
               <Text color="muted">
                 {countExpenses(list.count)} بمجموع {formatMoney(list.total, currency)}
               </Text>
-              {list.days.map((day) => (
+              {list.days.map((day, index) => (
                 <DayGroup
                   key={day.date}
+                  index={index}
                   date={day.date}
                   today={today}
                   total={day.total}

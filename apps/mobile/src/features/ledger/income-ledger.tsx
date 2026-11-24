@@ -28,9 +28,10 @@ export function IncomeLedger({ month, today, currency }: Props) {
         ) : (
           <>
             <Text color="muted">{countPayments(items.length)} بمجموع {formatMoney(total, currency)}</Text>
-            {groupByDay(items).map(([date, entries]) => (
+            {groupByDay(items).map(([date, entries], index) => (
               <DayGroup
                 key={date}
+                index={index}
                 date={date}
                 today={today}
                 total={entries.reduce((sum, income) => sum + income.amount, 0)}

@@ -7,10 +7,11 @@ import { todayISO } from "@masrufi/core/dates";
 
 import { useCategories, useProfile } from "@/api/queries";
 import type { EditableEntry, EntryKind } from "@/features/ledger/entry";
+import { spacing } from "@/theme/theme";
 import { Button } from "@/ui/button";
 import { QueryView } from "@/ui/query-view";
-import { Screen } from "@/ui/screen";
 import { Segmented } from "@/ui/segmented";
+import { Sheet } from "@/ui/sheet";
 import { Text } from "@/ui/text";
 
 import { ExpenseForm } from "./expense-form";
@@ -30,27 +31,34 @@ function readEntry({ kind, entry }: Params): EditableEntry | undefined {
     : { kind: "expense", item: JSON.parse(entry) as Expense };
 }
 
-/** Add or edit an expense or income. */
 export function EntryScreen() {
   const router = useRouter();
+  const leave = () => (router.canGoBack() ? router.back() : router.replace("/"));
+  return <Sheet onClosed={leave}>{(close) => <EntrySheet close={close} />}</Sheet>;
+}
+
+/** Add or edit an expense or income. */
+function EntrySheet({ close }: { close: () => void }) {
   const params = useLocalSearchParams<Params>();
   const [editing] = useState(() => readEntry(params));
   const [kind, setKind] = useState<EntryKind>(params.kind ?? "expense");
   const profile = useProfile();
   const categories = useCategories();
-  const close = () => (router.canGoBack() ? router.back() : router.replace("/"));
-
   const noun = kind === "income" ? "دخل" : "مصروف";
+
   return (
-    <Screen>
+    <>
       <View style={styles.header}>
+        <Button label="إلغاء" kind="plain" onPress={close} />
         <Text variant="heading" accessibilityRole="header">
           {editing ? `تعديل ${noun}` : `${noun} جديد`}
         </Text>
-        <Button label="إلغاء" kind="plain" onPress={close} />
+        <View style={styles.balance} />
       </View>
       {editing ? null : (
-        <Segmented label="نوع العملية" options={KINDS} value={kind} onChange={setKind} />
+        <View style={styles.kinds}>
+          <Segmented label="نوع العملية" options={KINDS} value={kind} onChange={setKind} />
+        </View>
       )}
       <QueryView query={profile}>
         {(me) => {
@@ -67,10 +75,12 @@ export function EntryScreen() {
           );
         }}
       </QueryView>
-    </Screen>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  balance: { width: 80 },
+  kinds: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
 });

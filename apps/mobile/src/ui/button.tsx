@@ -1,5 +1,6 @@
-import { ActivityIndicator, Pressable, StyleSheet } from "react-native";
+import { ActivityIndicator, StyleSheet } from "react-native";
 
+import { PressableScale } from "@/motion/pressable-scale";
 import { radius, useColors } from "@/theme/theme";
 
 import { Text } from "./text";
@@ -19,21 +20,17 @@ export function Button({ label, onPress, kind = "primary", busy = false, disable
   const inactive = busy || disabled;
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityState={{ disabled: inactive, busy }}
       disabled={inactive}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.button,
-        primary && { backgroundColor: colors.ink },
-        (pressed || inactive) && styles.dimmed,
-      ]}
+      style={[styles.button, primary && { backgroundColor: colors.ink }, inactive && styles.dimmed]}
     >
       {busy ? <ActivityIndicator color={colors[textColor]} /> : (
         <Text variant="strong" color={textColor}>{label}</Text>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 

@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { Category } from "@masrufi/contracts/api/responses";
 import { type DraftExpense, parseCommand } from "@masrufi/core/quick-add/parse";
 
+import { Collapse } from "@/motion/collapse";
 import { Field } from "@/ui/field";
 
 import { QuickAddList } from "./quick-add-list";
@@ -31,9 +32,9 @@ export function QuickAdd({ categories, today, currency, onDraft, onDone }: Props
   return (
     <>
       <Field label="إدخال سريع" value={sentence} onChangeText={read} placeholder="قهوة 5 بطاقة مبارح" />
-      {drafts.length > 0 ? (
+      <Collapse open={drafts.length > 0}>
         <QuickAddList drafts={drafts} categories={categories} currency={currency} onDone={onDone} />
-      ) : null}
+      </Collapse>
     </>
   );
 }

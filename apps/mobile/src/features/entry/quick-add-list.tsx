@@ -9,10 +9,12 @@ import type { DraftExpense } from "@masrufi/core/quick-add/parse";
 
 import { api } from "@/api/client";
 import { queryClient } from "@/api/query-client";
+import { haptics } from "@/motion/haptics";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { LedgerRows } from "@/ui/ledger-rows";
 import { Text } from "@/ui/text";
+import { showToast } from "@/ui/toast-store";
 
 type Props = { drafts: DraftExpense[]; categories: Category[]; currency: string; onDone: () => void };
 
@@ -36,6 +38,8 @@ export function QuickAddList({ drafts, categories, currency, onDone }: Props) {
         items: named.map(({ draft, key }) => ({ ...draft, amount: toMinor(draft.amount ?? 0), id: idFor(key) })),
       }),
     onSuccess: async () => {
+      haptics.success();
+      showToast(`تمت إضافة ${countExpenses(drafts.length)}`);
       onDone();
       await queryClient.invalidateQueries();
     },

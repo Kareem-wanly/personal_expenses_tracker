@@ -5,6 +5,7 @@ import { PAYMENT_METHOD_LABELS } from "@masrufi/core/constants";
 import { PAYMENT_METHODS, type PaymentMethod } from "@masrufi/core/enums";
 import type { DraftExpense } from "@masrufi/core/quick-add/parse";
 
+import { useEntryActions } from "@/features/entry-menu/use-entry-actions";
 import { Field } from "@/ui/field";
 import { Section } from "@/ui/section";
 import { Segmented } from "@/ui/segmented";
@@ -12,6 +13,7 @@ import { Segmented } from "@/ui/segmented";
 import { CategoryPicker } from "./category-picker";
 import { DayPicker } from "./day-picker";
 import { FormActions } from "./form-actions";
+import { FormLayout } from "./form-layout";
 import { moneyOf, moneyRequest } from "./money";
 import { MoneyInput } from "./money-input";
 import { QuickAdd } from "./quick-add";
@@ -38,7 +40,7 @@ export function ExpenseForm({ expense, categories, currency, today, onDone }: Pr
   const [method, setMethod] = useState<PaymentMethod>(expense?.paymentMethod ?? "cash");
   const [note, setNote] = useState(expense?.note ?? "");
   const [repeat, setRepeat] = useState<Repeat>("none");
-  const { save, remove, saving, removing, error, fields } = useSave({
+  const { save, saving, error, fields } = useSave({
     path: "/expenses",
     id: expense?.id,
     onDone,
@@ -52,12 +54,30 @@ export function ExpenseForm({ expense, categories, currency, today, onDone }: Pr
     setNote(draft.note ?? "");
   }
 
+  const { remove } = useEntryActions();
+  const removeEntry = () => {
+    if (!expense) return;
+    onDone();
+    void remove({ kind: "expense", item: expense });
+  };
+
   const amount = moneyRequest(money, currency);
   const submit = () =>
     save({ ...amount, categoryId, date, paymentMethod: method, note, ...(isNew && { repeat }) });
 
   return (
-    <>
+    <FormLayout
+      footer={
+        <FormActions
+          isNew={isNew}
+          canSave={amount !== null}
+          onSave={submit}
+          saving={saving}
+          onDelete={removeEntry}
+          error={error}
+        />
+      }
+    >
       {isNew ? <QuickAdd categories={categories} today={today} currency={currency} onDraft={fill} onDone={onDone} /> : null}
       <MoneyInput value={money} onChange={setMoney} userCurrency={currency} errors={fields} />
       <Section title="التصنيف">
@@ -69,15 +89,6 @@ export function ExpenseForm({ expense, categories, currency, today, onDone }: Pr
       <Segmented label="طريقة الدفع" options={METHODS} value={method} onChange={setMethod} />
       <Field label="ملاحظة (اختياري)" value={note} onChangeText={setNote} maxLength={120} error={fields.note?.[0]} />
       {isNew ? <RepeatPicker value={repeat} onChange={setRepeat} /> : null}
-      <FormActions
-        isNew={isNew}
-        canSave={amount !== null}
-        onSave={submit}
-        saving={saving}
-        onDelete={remove}
-        removing={removing}
-        error={error}
-      />
-    </>
+    </FormLayout>
   );
 }

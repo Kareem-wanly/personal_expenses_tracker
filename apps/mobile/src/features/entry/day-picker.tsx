@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 
 import { addDays, formatDayLabel } from "@masrufi/core/dates";
 
+import { Collapse } from "@/motion/collapse";
 import { spacing } from "@/theme/theme";
 import { Chip } from "@/ui/chip";
 
@@ -31,7 +32,9 @@ export function DayPicker({ value, today, onChange }: Props) {
           onPress={() => setOpen(!open)}
         />
       </View>
-      {open ? <Calendar value={value} onChange={choose} /> : null}
+      <Collapse open={open}>
+        <Calendar value={value} onChange={choose} />
+      </Collapse>
     </View>
   );
 }

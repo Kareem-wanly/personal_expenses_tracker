@@ -10,6 +10,20 @@ export type EntryKind = LedgerEntry["kind"];
 
 export type EditableEntry = { kind: "expense"; item: Expense } | { kind: "income"; item: Income };
 
+export const pathOf = (kind: EntryKind) => (kind === "income" ? "/incomes" : "/expenses");
+
+/** A request that creates the same entry on another day. */
+export function copyOf({ kind, item }: EditableEntry, date: string) {
+  const { note, amount, originalAmount, originalCurrency } = item;
+  const money =
+    originalAmount !== null && originalCurrency !== null
+      ? { amount: originalAmount, currency: originalCurrency, rate: amount / originalAmount }
+      : { amount };
+  return kind === "income"
+    ? { ...money, date, note, source: item.source }
+    : { ...money, date, note, categoryId: item.categoryId, paymentMethod: item.paymentMethod };
+}
+
 export function describeEntry(entry: LedgerEntry) {
   if (entry.kind === "income") {
     const { label, icon, color } = INCOME_SOURCE_META[entry.item.source];

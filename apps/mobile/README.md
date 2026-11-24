@@ -23,3 +23,9 @@ npm run dev -w @masrufi/mobile
 
 Press `w` for the browser or `a` for Android. On a phone, set `EXPO_PUBLIC_API_URL` to this
 computer's network address in `apps/mobile/.env`, and add `exp://` to the API's `TRUSTED_ORIGINS`.
+
+## Motion
+
+`src/motion` is the only place that defines durations and springs. Use `Reveal` (arrive), `Swap`
+(replace), `Collapse` (unfold), `PressableScale` (tap), `useGrow` (bars, rings), `useShake` (refuse)
+and `haptics`. Everything follows the phone's "reduce motion" setting.

@@ -1,57 +1,49 @@
-import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { type ComponentRef, useRef } from "react";
+import { View } from "react-native";
+import Animated, { FadeIn, FadeOutLeft, LinearTransition } from "react-native-reanimated";
 
-import { formatMoney } from "@masrufi/core/money";
+import { openEntryMenu } from "@/features/entry-menu/menu-store";
+import { useEntryActions } from "@/features/entry-menu/use-entry-actions";
+import { haptics } from "@/motion/haptics";
+import { PressableScale } from "@/motion/pressable-scale";
+import { durations } from "@/motion/tokens";
 
-import { radius, spacing } from "@/theme/theme";
-import { Text } from "@/ui/text";
+import type { LedgerEntry } from "./entry";
+import { EntryRow } from "./entry-row";
 
-import { type LedgerEntry, describeEntry } from "./entry";
+const HOLD = 380;
 
 type Props = { entry: LedgerEntry; currency: string; meta?: string };
 
-/** Tap to edit. */
+/** Tap to edit, hold for the menu. */
 export function EntryItem({ entry, currency, meta }: Props) {
-  const router = useRouter();
-  const { title, subtitle, icon, color } = describeEntry(entry);
-  const { amount, originalAmount, originalCurrency, recurringId } = entry.item;
-  const income = entry.kind === "income";
-  const edit = () =>
-    router.push({ pathname: "/entry", params: { kind: entry.kind, entry: JSON.stringify(entry.item) } });
+  const box = useRef<ComponentRef<typeof View>>(null);
+  const { edit } = useEntryActions();
+
+  const openMenu = () =>
+    box.current?.measureInWindow((x, y, width, height) => {
+      haptics.lift();
+      openEntryMenu({ entry, currency, frame: { x, y, width, height } });
+    });
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityHint="تعديل"
-      onPress={edit}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    <Animated.View
+      entering={FadeIn.duration(durations.normal)}
+      exiting={FadeOutLeft.duration(durations.fast)}
+      layout={LinearTransition.duration(durations.normal)}
     >
-      <View style={[styles.icon, { backgroundColor: `${color}26` }]}>
-        <Text style={styles.emoji}>{icon}</Text>
+      <View ref={box} collapsable={false}>
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityHint="تعديل، ومع الضغط المطوّل خيارات أكثر"
+          to={0.98}
+          delayLongPress={HOLD}
+          onLongPress={openMenu}
+          onPress={() => edit(entry)}
+        >
+          <EntryRow entry={entry} currency={currency} meta={meta} />
+        </PressableScale>
       </View>
-      <View style={styles.texts}>
-        <Text variant="strong" numberOfLines={1}>{title}</Text>
-        <Text variant="small" color="muted" numberOfLines={1}>
-          {[subtitle, meta, recurringId ? "متكرر" : ""].filter(Boolean).join(" · ")}
-        </Text>
-      </View>
-      <View style={styles.amounts}>
-        <Text variant="strong" color={income ? "positive" : "text"}>
-          {formatMoney(income ? amount : -amount, currency)}
-        </Text>
-        {originalAmount !== null && originalCurrency ? (
-          <Text variant="small" color="muted">{formatMoney(originalAmount, originalCurrency)}</Text>
-        ) : null}
-      </View>
-    </Pressable>
+    </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.sm },
-  pressed: { opacity: 0.55 },
-  icon: { width: 42, height: 42, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
-  emoji: { fontSize: 20, lineHeight: 28 },
-  texts: { flex: 1 },
-  amounts: { alignItems: "flex-end" },
-});

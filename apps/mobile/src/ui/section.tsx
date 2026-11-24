@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
+import { PressableScale } from "@/motion/pressable-scale";
 import { spacing } from "@/theme/theme";
 
 import { Text } from "./text";
@@ -13,9 +14,9 @@ export function Section({ title, link, onPressLink, children }: Props) {
       <View style={styles.header}>
         <Text variant="heading" accessibilityRole="header">{title}</Text>
         {link ? (
-          <Pressable accessibilityRole="link" onPress={onPressLink} hitSlop={10}>
+          <PressableScale accessibilityRole="link" onPress={onPressLink} hitSlop={10}>
             <Text color="accent">{link}</Text>
-          </Pressable>
+          </PressableScale>
         ) : null}
       </View>
       {children}

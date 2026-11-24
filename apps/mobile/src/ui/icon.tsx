@@ -7,6 +7,10 @@ const paths = {
   reports: "M5 20V11M12 20V4M19 20v-6",
   chevronLeft: "m14 6-6 6 6 6",
   chevronRight: "m10 6 6 6-6 6",
+  check: "m5 12 5 5 9-10",
+  edit: "M4 20h4L19 9l-4-4L4 16zM13 7l4 4",
+  copy: "M9 9h11v11H9zM5 15H4V4h11v1M14.500 12v5M12 14.500h5",
+  trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",
   more: "M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M6 15v4",
 };
 

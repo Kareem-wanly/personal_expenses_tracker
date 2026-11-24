@@ -3,6 +3,7 @@ import { useState } from "react";
 import { monthOf, todayISO } from "@masrufi/core/dates";
 
 import { useProfile } from "@/api/queries";
+import { Swap } from "@/motion/swap";
 import { MonthSwitcher } from "@/ui/month-switcher";
 import { Screen } from "@/ui/screen";
 import { Segmented } from "@/ui/segmented";
@@ -29,7 +30,9 @@ export function LedgerScreen() {
       <Text variant="title" accessibilityRole="header">السجلّ</Text>
       <Segmented label="نوع السجلّ" options={KINDS} value={kind} onChange={setKind} />
       <MonthSwitcher month={month} onChange={setMonth} />
-      {kind === "expense" ? <ExpenseLedger {...props} /> : <IncomeLedger {...props} />}
+      <Swap id={kind}>
+        {kind === "expense" ? <ExpenseLedger {...props} /> : <IncomeLedger {...props} />}
+      </Swap>
     </Screen>
   );
 }

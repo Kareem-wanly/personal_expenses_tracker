@@ -1,53 +1,64 @@
-import { StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 import type { Report } from "@masrufi/contracts/api/responses";
-import { formatShortMonth } from "@masrufi/core/dates";
+import { formatMonthLabel, formatShortMonth } from "@masrufi/core/dates";
 import { formatMoney } from "@masrufi/core/money";
 
+import { haptics } from "@/motion/haptics";
+import { durations } from "@/motion/tokens";
 import { spacing, useColors } from "@/theme/theme";
 import { Card } from "@/ui/card";
 import { Text } from "@/ui/text";
 
-type Month = Report["trend"][number];
-type Props = { months: Month[]; currency: string };
+import { Bar } from "./bar";
 
-const HEIGHT = 120;
+const HEIGHT = 130;
 
-export function TrendChart({ months, currency }: Props) {
+type Props = { months: Report["trend"]; viewed: string; currency: string };
+
+/** Spending beside income; tap a month to read it. */
+export function TrendChart({ months, viewed, currency }: Props) {
   const colors = useColors();
+  const [selected, setSelected] = useState(viewed);
   const highest = Math.max(1, ...months.flatMap(({ total, income }) => [total, income]));
-  const bar = (value: number) => Math.max(2, Math.round((value / highest) * HEIGHT));
+  const height = (value: number) => (value === 0 ? 1 : Math.max(3, (value / highest) * HEIGHT));
+  const shown = months.find(({ month }) => month === selected) ?? months[months.length - 1];
 
   return (
     <Card>
+      <Animated.View key={selected} entering={FadeInDown.duration(durations.fast)} style={styles.caption}>
+        <Text variant="strong">{formatMonthLabel(shown.month)}</Text>
+        <Text variant="small" color="accent">صرف {formatMoney(shown.total, currency)}</Text>
+        <Text variant="small" color="positive">دخل {formatMoney(shown.income, currency)}</Text>
+      </Animated.View>
       <View style={styles.chart}>
-        {months.map(({ month, total, income }) => (
-          <View
+        {months.map(({ month, total, income }, index) => (
+          <Pressable
             key={month}
-            accessible
             accessibilityLabel={`${formatShortMonth(month)}: صرف ${formatMoney(total, currency)}، دخل ${formatMoney(income, currency)}`}
+            onPress={() => {
+              haptics.tap();
+              setSelected(month);
+            }}
             style={styles.month}
           >
             <View style={styles.bars}>
-              <View style={[styles.bar, { height: bar(total), backgroundColor: colors.accent }]} />
-              <View style={[styles.bar, { height: bar(income), backgroundColor: colors.positive }]} />
+              <Bar height={height(total)} width={14} color={colors.accent} delay={index * 70} dimmed={month !== selected} />
+              <Bar height={height(income)} width={14} color={colors.positive} delay={index * 70 + 60} dimmed={month !== selected} />
             </View>
-            <Text variant="small" color="muted">{formatShortMonth(month)}</Text>
-          </View>
+            <Text variant="small" color={month === selected ? "text" : "muted"}>{formatShortMonth(month)}</Text>
+          </Pressable>
         ))}
-      </View>
-      <View style={styles.legend}>
-        <Text variant="small" color="accent">■ المصروف</Text>
-        <Text variant="small" color="positive">■ الدخل</Text>
       </View>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  chart: { flexDirection: "row", justifyContent: "space-between" },
+  caption: { flexDirection: "row", alignItems: "baseline", gap: spacing.md, flexWrap: "wrap" },
+  chart: { flexDirection: "row" },
   month: { flex: 1, alignItems: "center", gap: spacing.xs },
   bars: { height: HEIGHT, flexDirection: "row", alignItems: "flex-end", gap: 3 },
-  bar: { width: 12, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
-  legend: { flexDirection: "row", gap: spacing.lg },
 });
