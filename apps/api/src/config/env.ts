@@ -21,6 +21,14 @@ const schema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  /** smtp://user:password@host:587 */
+  SMTP_URL: optional,
+  MAIL_FROM: optional,
+  VAPID_SUBJECT: optional.transform((v) => v ?? "mailto:admin@example.com"),
+  VAPID_PUBLIC_KEY: optional,
+  VAPID_PRIVATE_KEY: optional,
+  /** What the scheduler sends to run /jobs. */
+  CRON_SECRET: optional.refine((v) => !v || v.length >= 16, "must be at least 16 characters"),
   GOOGLE_CLIENT_ID: optional,
   GOOGLE_CLIENT_SECRET: optional,
   APPLE_CLIENT_ID: optional,

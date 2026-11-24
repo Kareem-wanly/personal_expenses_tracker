@@ -30,6 +30,10 @@ Request shapes live in `packages/contracts/src/api`, tables in `packages/db/src/
 - Anything that reads before it writes runs in `store.transaction` and locks its parent row.
 - Success is `{ data }`; failure is `{ error: { code, message, fields? } }`.
 
+## Scheduler
+
+Once a day: `POST /jobs/daily` with `Authorization: Bearer <CRON_SECRET>`.
+
 ## Run
 
 ```powershell
@@ -47,6 +51,12 @@ Tests use it too, in memory, with the real migrations:
 
 ```powershell
 npm test -w @masrufi/api
+```
+
+On a real PostgreSQL server (needed to prove locking; temporary databases are created and dropped):
+
+```powershell
+$env:TEST_DATABASE_URL="postgres://user:password@localhost:5432/postgres"; npm test -w @masrufi/api
 ```
 
 After changing a table:

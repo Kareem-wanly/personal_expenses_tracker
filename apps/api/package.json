@@ -13,6 +13,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
+    "@types/nodemailer": "^8.0.2",
+    "@types/web-push": "^3.6.4",
     "drizzle-kit": "^0.31.11",
     "typescript": "^5.9.3"
   },
@@ -24,8 +26,10 @@
     "better-auth": "^1.7.27",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.21",
+    "nodemailer": "^10.6.1",
     "postgres": "^4.1.1",
     "tsx": "^4.23.15",
+    "web-push": "^4.0.0",
     "zod": "^4.6.7"
   }
 }

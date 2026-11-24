@@ -4,17 +4,9 @@ import { eq, inArray } from "drizzle-orm";
 import { sendNotification, setVapidDetails } from "web-push";
 
 import { db } from "@/db";
+import type { PushPayload } from "@masrufi/core/notifications";
 import { pushSubscription } from "@masrufi/db/schema";
 import { env } from "@/lib/env";
-
-export type PushPayload = {
-  title: string;
-  body: string;
-  /** Page to open when the notification is tapped. */
-  url?: string;
-  /** Same tag replaces an older notification instead of stacking. */
-  tag?: string;
-};
 
 const decodedLength = (b64url: string) => Buffer.from(b64url, "base64url").length;
 

@@ -38,12 +38,30 @@ test("a payment sent twice counts once", async () => {
   assert.equal((await user.get("/v1/debts")).data[0].paid, 6000);
 });
 
+/** Sends the same request many times at once; how many were accepted. */
+async function acceptedAtOnce(send: () => Promise<{ status: number }>) {
+  const replies = await Promise.all(Array.from({ length: 10 }, send));
+  return replies.filter((reply) => reply.status === 201).length;
+}
+
+// Only proves the locking on a real server (TEST_DATABASE_URL): PGlite has one connection.
 test("simultaneous payments can't exceed the debt", async () => {
   const user = await signUp();
-  const debt = (await user.post("/v1/debts", loan)).data;
-  const pay = () => user.post(`/v1/debts/${debt.id}/payments`, { amount: 7000, ...day });
-  const statuses = (await Promise.all([pay(), pay()])).map((reply) => reply.status).sort();
-  assert.deepEqual(statuses, [201, 422]);
+  for (let round = 0; round < 5; round++) {
+    const debt = (await user.post("/v1/debts", loan)).data;
+    const pay = () => user.post(`/v1/debts/${debt.id}/payments`, { amount: 7000, ...day });
+    assert.equal(await acceptedAtOnce(pay), 1);
+  }
+});
+
+test("simultaneous withdrawals can't exceed the savings", async () => {
+  const user = await signUp();
+  for (let round = 0; round < 5; round++) {
+    const goal = (await user.post("/v1/goals", { ...car, initial: 4000 })).data;
+    const body = { kind: "withdraw", amount: 3000, ...day };
+    const withdraw = () => user.post(`/v1/goals/${goal.id}/contributions`, body);
+    assert.equal(await acceptedAtOnce(withdraw), 1);
+  }
 });
 
 test("raising the amount reopens a settled debt", async () => {

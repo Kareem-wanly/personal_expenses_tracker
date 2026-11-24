@@ -31,7 +31,7 @@ test("only JSON bodies are read", async () => {
 test("huge bodies are refused", async () => {
   const body = JSON.stringify({ name: "x".repeat(300_000) });
   const reply = await raw({ "content-type": "application/json", "content-length": String(body.length) }, body);
-  assert.equal(reply.status, 400);
+  assert.equal(reply.status, 413);
 });
 
 test("invalid fields are named", async () => {

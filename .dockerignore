@@ -1,0 +1,8 @@
+**/node_modules
+**/.next
+**/.data
+**/.env*
+**/*.db
+.git
+apps/web
+android

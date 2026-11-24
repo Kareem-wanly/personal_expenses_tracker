@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 
 import { categoryController } from "../controllers/category.controller";
+import { dataController } from "../controllers/data.controller";
+import { deviceController } from "../controllers/device.controller";
 import { profileController } from "../controllers/profile.controller";
 import { reportController } from "../controllers/report.controller";
 import type { AppEnv } from "../lib/context";
@@ -13,6 +15,8 @@ export function createRoutes(services: Services) {
   const profile = profileController(services.profile);
   const categories = categoryController(services.categories);
   const reports = reportController(services);
+  const data = dataController(services);
+  const devices = deviceController(services.devices);
 
   return new Hono<AppEnv>()
     .get("/me", profile.show)
@@ -27,6 +31,14 @@ export function createRoutes(services: Services) {
     .get("/reports/monthly", reports.monthly)
     .get("/insights", reports.insights)
     .get("/rates", reports.rate)
+
+    .get("/backup", data.backup)
+    .post("/backup/restore", data.restore)
+    .get("/export", data.csv)
+
+    .post("/devices", devices.register)
+    .delete("/devices", devices.remove)
+    .post("/devices/test", devices.test)
 
     .route("/", ledgerRoutes(services))
     .route("/", plansRoutes(services));

@@ -1,6 +1,8 @@
 import { type NextRequest } from "next/server";
 
-import { backupSchema, buildBackup, restoreBackup } from "@/lib/backup";
+import { backupSchema } from "@masrufi/contracts/backup";
+
+import { buildBackup, restoreBackup } from "@/lib/backup";
 import { getCurrentUser } from "@/lib/dal";
 
 /** Larger than a Server Action allows (1 MB): years of data fit here. */

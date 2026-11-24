@@ -11,6 +11,7 @@ import type { Models, Store } from "../models";
 import type { Expense } from "../models/expense.model";
 import type { User } from "../models/user.model";
 import { toUserCurrency } from "./money";
+import type { BudgetAlertService } from "./notifications/budget-alert.service";
 import { assertCategoriesOwned } from "./ownership";
 import type { RecurringService } from "./recurring.service";
 
@@ -20,6 +21,7 @@ export class ExpenseService {
   constructor(
     private readonly store: Store,
     private readonly recurring: RecurringService,
+    private readonly alerts: BudgetAlertService,
   ) {}
 
   async list(user: User, { month, ...filters }: ExpenseFilters) {
@@ -27,7 +29,29 @@ export class ExpenseService {
     return this.store.expenses.list(user.id, { ...monthRange(month), ...filters });
   }
 
-  async create(user: User, input: CreateExpense): Promise<Expense> {
+  create(user: User, input: CreateExpense): Promise<Expense> {
+    return this.alerts.watch(user, [input], () => this.save(user, input));
+  }
+
+  createBatch(user: User, { items }: CreateExpenseBatch): Promise<Expense[]> {
+    return this.alerts.watch(user, items, () => this.saveAll(user, items));
+  }
+
+  async update(user: User, id: string, input: UpdateExpense): Promise<Expense> {
+    await assertCategoriesOwned(this.store, user.id, [input.categoryId]);
+    const { id: _, ...values } = this.toRow(user, input);
+    const updated = await this.alerts.watch(user, [input], () =>
+      this.store.expenses.update(user.id, id, values),
+    );
+    if (!updated) throw notFound(MISSING);
+    return updated;
+  }
+
+  async delete(user: User, id: string): Promise<void> {
+    if (!(await this.store.expenses.delete(user.id, id))) throw notFound(MISSING);
+  }
+
+  private async save(user: User, input: CreateExpense): Promise<Expense> {
     const { repeat, ...fields } = input;
     const expense = await this.store.transaction(async (models) => {
       await assertCategoriesOwned(models, user.id, [fields.categoryId]);
@@ -53,7 +77,7 @@ export class ExpenseService {
     return expense;
   }
 
-  createBatch(user: User, { items }: CreateExpenseBatch): Promise<Expense[]> {
+  private saveAll(user: User, items: CreateExpenseBatch["items"]): Promise<Expense[]> {
     return this.store.transaction(async (models) => {
       await assertCategoriesOwned(models, user.id, items.map((item) => item.categoryId));
       const saved: Expense[] = [];
@@ -63,18 +87,6 @@ export class ExpenseService {
       }
       return saved;
     });
-  }
-
-  async update(user: User, id: string, input: UpdateExpense): Promise<Expense> {
-    await assertCategoriesOwned(this.store, user.id, [input.categoryId]);
-    const { id: _, ...values } = this.toRow(user, input);
-    const updated = await this.store.expenses.update(user.id, id, values);
-    if (!updated) throw notFound(MISSING);
-    return updated;
-  }
-
-  async delete(user: User, id: string): Promise<void> {
-    if (!(await this.store.expenses.delete(user.id, id))) throw notFound(MISSING);
   }
 
   private toRow(user: User, input: UpdateExpense & { id?: string }) {

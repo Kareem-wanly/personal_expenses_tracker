@@ -1,12 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { after } from "node:test";
 
+import type { PushPayload } from "@masrufi/core/notifications";
+
 import { createApp } from "../src/app";
 import { loadEnv } from "../src/config/env";
-import { connect } from "../src/database/client";
+import { BackgroundTasks } from "../src/lib/background";
 import type { Mail } from "../src/lib/mailer";
+import type { Delivery } from "../src/lib/push-sender";
+import type { Device } from "../src/models/device.model";
+import { freshDatabase } from "./database";
 
 export const ORIGIN = "http://localhost:3000";
+export const CRON_SECRET = "cron-secret-for-tests";
 
 const env = loadEnv({
   NODE_ENV: "test",
@@ -14,19 +20,32 @@ const env = loadEnv({
   BETTER_AUTH_SECRET: "test-secret-that-is-long-enough-123456",
   API_URL: "http://localhost:4000",
   TRUSTED_ORIGINS: `${ORIGIN},masrufi://`,
+  CRON_SECRET,
 });
 
-/** A fresh in-memory PostgreSQL with the real migrations, and the app on top of it. */
+/** Remembers what was sent; `answer` decides what the push service replies. */
+class FakePushSender {
+  sent: { endpoint: string; payload: PushPayload }[] = [];
+  answer: Delivery = { result: "sent" };
+
+  async send(device: Device, payload: PushPayload): Promise<Delivery> {
+    this.sent.push({ endpoint: device.endpoint, payload });
+    return this.answer;
+  }
+}
+
+/** The whole app on a fresh database with the real migrations. */
 export async function startApp() {
-  const connection = await connect(env.DATABASE_URL);
-  await connection.migrate();
-  after(() => connection.close());
+  const { db, close } = await freshDatabase();
+  after(close);
 
   const mails: Mail[] = [];
   const mailer = { send: async (mail: Mail) => void mails.push(mail) };
   const rateSource = async () => ({ USD: 1, EUR: 0.9 });
-  const app = createApp({ db: connection.db, env, mailer, rateSource });
-  return { app, db: connection.db, mails, signUp: () => signUp(app) };
+  const push = new FakePushSender();
+  const background = new BackgroundTasks();
+  const app = createApp({ db, env, mailer, rateSource, pushSender: push, background });
+  return { app, mails, push, background, signUp: () => signUp(app) };
 }
 
 type App = ReturnType<typeof createApp>;
@@ -70,11 +89,13 @@ async function signUp(app: App) {
   return {
     email,
     cookie,
+    /** The raw answer, for downloads. */
+    download: (path: string) => app.request(path, { headers: { cookie } }),
     get: (path: string) => call(app, "GET", path, undefined, cookie),
     post: (path: string, body?: unknown) => call(app, "POST", path, body, cookie),
     put: (path: string, body: unknown) => call(app, "PUT", path, body, cookie),
     patch: (path: string, body: unknown) => call(app, "PATCH", path, body, cookie),
-    delete: (path: string) => call(app, "DELETE", path, undefined, cookie),
+    delete: (path: string, body?: unknown) => call(app, "DELETE", path, body, cookie),
   };
 }
 
