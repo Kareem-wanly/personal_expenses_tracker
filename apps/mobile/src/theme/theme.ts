@@ -2,10 +2,15 @@ import { useMemo } from "react";
 import { useColorScheme } from "react-native";
 
 import { type Colors, palettes } from "./colors";
+import { useThemeChoice } from "./theme-store";
 
-export function useColors(): Colors {
-  return useColorScheme() === "dark" ? palettes.dark : palettes.light;
+export function useScheme(): "light" | "dark" {
+  const system = useColorScheme() === "dark" ? "dark" : "light";
+  const choice = useThemeChoice();
+  return choice === "system" ? system : choice;
 }
+
+export const useColors = (): Colors => palettes[useScheme()];
 
 /** Styles that follow light and dark mode: `const styles = useStyles(createStyles)`. */
 export function useStyles<T>(create: (colors: Colors) => T): T {

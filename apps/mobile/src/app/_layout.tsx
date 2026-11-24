@@ -10,10 +10,12 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { authClient } from "@/api/auth";
 import { queryClient } from "@/api/query-client";
 import { EntryMenuHost } from "@/features/entry-menu/entry-menu-host";
+import { LockOverlay } from "@/features/lock/lock-overlay";
 import { SplashOverlay } from "@/features/splash/splash-overlay";
 import { forceRightToLeft, rtlRoot } from "@/theme/rtl";
-import { useColors } from "@/theme/theme";
+import { useColors, useScheme } from "@/theme/theme";
 import { useAppFonts } from "@/theme/use-app-fonts";
+import { Overlay } from "@/ui/overlay";
 import { ToastHost } from "@/ui/toast-host";
 
 forceRightToLeft();
@@ -21,6 +23,7 @@ void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colors = useColors();
+  const scheme = useScheme();
   const fontsReady = useAppFonts();
   const { data: session, isPending } = authClient.useSession();
   const ready = fontsReady && !isPending;
@@ -42,27 +45,24 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <StatusBar style="auto" />
+          <StatusBar style={scheme === "dark" ? "light" : "dark"} />
           <View {...rtlRoot} style={styles.root}>
             <Stack screenOptions={{ headerShown: false, contentStyle, animation: "fade" }}>
               <Stack.Protected guard={!!session}>
                 <Stack.Screen name="(tabs)" />
-                <Stack.Screen
-                  name="entry"
-                  options={{
-                    presentation: "transparentModal",
-                    animation: "none",
-                    contentStyle: styles.transparent,
-                  }}
-                />
+                <Stack.Screen name="entry" options={sheetOptions} />
+                <Stack.Screen name="sheet/[name]" options={sheetOptions} />
               </Stack.Protected>
               <Stack.Protected guard={!session}>
                 <Stack.Screen name="(auth)" />
               </Stack.Protected>
             </Stack>
-            <EntryMenuHost />
-            <ToastHost />
-            <SplashOverlay />
+            <Overlay>
+              <EntryMenuHost />
+              <ToastHost />
+              {session ? <LockOverlay userId={session.user.id} /> : null}
+              <SplashOverlay />
+            </Overlay>
           </View>
         </QueryClientProvider>
       </SafeAreaProvider>
@@ -70,4 +70,12 @@ export default function RootLayout() {
   );
 }
 
-const styles = StyleSheet.create({ root: { flex: 1 }, transparent: { backgroundColor: "transparent" } });
+const transparent = { backgroundColor: "transparent" };
+
+const sheetOptions = {
+  presentation: "transparentModal",
+  animation: "none",
+  contentStyle: transparent,
+} as const;
+
+const styles = StyleSheet.create({ root: { flex: 1 } });

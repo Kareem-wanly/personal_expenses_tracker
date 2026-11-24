@@ -5,6 +5,8 @@ import { formatDayLabel, parseISODate } from "@masrufi/core/dates";
 
 import { useDashboard, useInsights, useProfile } from "@/api/queries";
 import { EntryItem } from "@/features/ledger/entry-item";
+import { PlanTiles } from "@/features/plans/plan-tiles";
+import { useWhatsNew } from "@/features/whats-new/use-whats-new";
 import { Reveal } from "@/motion/reveal";
 import { Card } from "@/ui/card";
 import { QueryView } from "@/ui/query-view";
@@ -24,6 +26,7 @@ const fullDate = new Intl.DateTimeFormat("ar-u-nu-latn", { weekday: "long", day:
 export function HomeScreen() {
   const profile = useProfile();
   const dashboard = useDashboard();
+  useWhatsNew();
   const refresh = () => void dashboard.refetch();
   return (
     <Screen refreshing={dashboard.isRefetching} onRefresh={refresh}>
@@ -52,6 +55,9 @@ function Home({ me, data }: { me: Profile; data: Dashboard }) {
       </Reveal>
       <Reveal index={3}>
         <DayFigures dashboard={data} budget={monthlyBudget} currency={currency} />
+      </Reveal>
+      <Reveal index={4}>
+        <PlanTiles />
       </Reveal>
       {hasEntries ? (
         <Spending data={data} currency={currency} />

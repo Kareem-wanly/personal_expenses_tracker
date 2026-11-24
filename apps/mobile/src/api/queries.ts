@@ -3,10 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import type {
   Category,
   Dashboard,
+  DebtDetails,
   ExpenseList,
+  GoalDetails,
   IncomeList,
   Insight,
   Profile,
+  RecurringRow,
   Report,
 } from "@masrufi/contracts/api/responses";
 
@@ -17,6 +20,15 @@ export const useProfile = () =>
 
 export const useCategories = () =>
   useQuery({ queryKey: ["categories"], queryFn: () => api.get<Category[]>("/categories") });
+
+export const useDebts = () =>
+  useQuery({ queryKey: ["debts"], queryFn: () => api.get<DebtDetails[]>("/debts") });
+
+export const useGoals = () =>
+  useQuery({ queryKey: ["goals"], queryFn: () => api.get<GoalDetails[]>("/goals") });
+
+export const useRecurring = () =>
+  useQuery({ queryKey: ["recurring"], queryFn: () => api.get<RecurringRow[]>("/recurring") });
 
 export const useDashboard = () =>
   useQuery({ queryKey: ["dashboard"], queryFn: () => api.get<Dashboard>("/dashboard") });

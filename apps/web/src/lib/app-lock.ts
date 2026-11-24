@@ -1,3 +1,5 @@
+import type { LockTimeout } from "@masrufi/core/app-lock";
+
 /**
  * App lock: after the app has been in the background for a while, cover it
  * until the user enters a 4-digit PIN or verifies with Face ID / fingerprint.
@@ -12,19 +14,14 @@
  * the device keychain. No new credential is created.
  */
 
+export * from "@masrufi/core/app-lock";
+
 export const LOCK_KEY = "app-lock";
 export const ACTIVE_KEY = "app-lock-active";
 /** `<html>` attribute set while locked; CSS hides the app under it. */
 export const LOCKED_ATTR = "data-locked";
 
-export const PIN_LENGTH = 4;
-export const MAX_ATTEMPTS = 5;
-export const COOLDOWN_MS = 30_000;
 const PBKDF2_ITERATIONS = 100_000;
-
-/** Seconds in the background before the app locks (0 = every time). */
-export const LOCK_TIMEOUTS = [0, 60, 300, 900] as const;
-export type LockTimeout = (typeof LOCK_TIMEOUTS)[number];
 
 export type LockConfig = {
   v: 1;
@@ -37,14 +34,6 @@ export type LockConfig = {
 };
 
 /* ------------------------------- pure helpers ------------------------------ */
-
-/** Should the app lock, given when it was last seen in the foreground? */
-export function shouldLock(now: number, lastActive: number | null, timeoutSec: number) {
-  if (lastActive === null || !Number.isFinite(lastActive)) return true;
-  return now - lastActive >= timeoutSec * 1000;
-}
-
-export const isValidPin = (pin: string) => new RegExp(`^\\d{${PIN_LENGTH}}$`).test(pin);
 
 const toB64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 const fromB64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));

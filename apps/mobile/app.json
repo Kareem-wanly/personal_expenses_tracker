@@ -19,17 +19,45 @@
         "backgroundColor": "#1a1915"
       }
     },
-    "web": { "bundler": "metro", "output": "single" },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      ["expo-splash-screen", { "image": "./assets/icon.png", "imageWidth": 160, "backgroundColor": "#1a1915" }],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#1a1915"
+        }
+      ],
       "expo-font",
       "expo-secure-store",
-      ["expo-localization", { "supportsRTL": true, "forcesRTL": true }],
-      "expo-web-browser"
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true,
+          "forcesRTL": true
+        }
+      ],
+      "expo-web-browser",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "لفتح قفل مصروفي"
+        }
+      ],
+      "expo-sharing"
     ],
-    "extra": { "supportsRTL": true, "forcesRTL": true },
-    "experiments": { "typedRoutes": false }
+    "extra": {
+      "supportsRTL": true,
+      "forcesRTL": true
+    },
+    "experiments": {
+      "typedRoutes": false
+    }
   }
 }

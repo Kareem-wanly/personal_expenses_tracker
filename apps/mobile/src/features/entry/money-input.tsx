@@ -27,9 +27,11 @@ type Props = {
   onChange: (value: MoneyValue) => void;
   userCurrency: string;
   errors: Record<string, string[]>;
+  /** False when the amount simply is in that currency (a debt, a goal). */
+  convert?: boolean;
 };
 
-export function MoneyInput({ value, onChange, userCurrency, errors }: Props) {
+export function MoneyInput({ value, onChange, userCurrency, errors, convert = true }: Props) {
   const colors = useColors();
   const styles = useStyles(createStyles);
   const [choosing, setChoosing] = useState(false);
@@ -45,7 +47,7 @@ export function MoneyInput({ value, onChange, userCurrency, errors }: Props) {
   async function choose(currency: string) {
     setChoosing(false);
     onChange({ ...value, currency, rate: "" });
-    onChange({ ...value, currency, rate: await suggestRate(currency) });
+    if (convert) onChange({ ...value, currency, rate: await suggestRate(currency) });
   }
 
   return (
@@ -62,18 +64,33 @@ export function MoneyInput({ value, onChange, userCurrency, errors }: Props) {
         style={[styles.amount, figure]}
       />
       {errors.amount ? <Text color="negative">{errors.amount[0]}</Text> : null}
-      <PressableScale accessibilityRole="button" onPress={() => setChoosing(!choosing)} style={styles.currency}>
+      <PressableScale
+        accessibilityRole="button"
+        onPress={() => setChoosing(!choosing)}
+        style={styles.currency}
+      >
         <Text>{value.currency}</Text>
       </PressableScale>
-      <Collapse open={choosing}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.options}>
-          {CURRENCIES.map(({ code, label }) => (
-            <Chip key={code} label={label} selected={code === value.currency} onPress={() => void choose(code)} />
-          ))}
-        </ScrollView>
-      </Collapse>
-      <View style={styles.rate}>
-        <Collapse open={value.currency !== userCurrency}>
+      <View style={styles.full}>
+        <Collapse open={choosing}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.options}
+          >
+            {CURRENCIES.map(({ code, label }) => (
+              <Chip
+                key={code}
+                label={label}
+                selected={code === value.currency}
+                onPress={() => void choose(code)}
+              />
+            ))}
+          </ScrollView>
+        </Collapse>
+      </View>
+      <View style={styles.full}>
+        <Collapse open={convert && value.currency !== userCurrency}>
           <Field
             label={`1 ${value.currency} كم ${userCurrency}؟`}
             inputMode="decimal"
@@ -81,7 +98,9 @@ export function MoneyInput({ value, onChange, userCurrency, errors }: Props) {
             onChangeText={(rate) => onChange({ ...value, rate })}
             error={errors.rate?.[0]}
           />
-          <Text variant="small" color="muted">سعر اليوم الرسمي من ExchangeRate-API، ويمكنك تعديله.</Text>
+          <Text variant="small" color="muted">
+            سعر اليوم الرسمي من ExchangeRate-API، ويمكنك تعديله.
+          </Text>
         </Collapse>
       </View>
     </Animated.View>
@@ -91,7 +110,13 @@ export function MoneyInput({ value, onChange, userCurrency, errors }: Props) {
 const createStyles = (colors: Colors) =>
   StyleSheet.create({
     block: { alignItems: "center", gap: spacing.sm },
-    amount: { width: "100%", minHeight: 80, textAlign: "center", fontFamily: fonts.display, color: colors.text },
+    amount: {
+      width: "100%",
+      minHeight: 80,
+      textAlign: "center",
+      fontFamily: fonts.display,
+      color: colors.text,
+    },
     currency: {
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.xs,
@@ -100,5 +125,5 @@ const createStyles = (colors: Colors) =>
       borderRadius: radius.full,
     },
     options: { gap: spacing.sm },
-    rate: { width: "100%" },
+    full: { width: "100%" },
   });

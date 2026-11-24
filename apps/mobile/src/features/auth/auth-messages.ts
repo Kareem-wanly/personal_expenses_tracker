@@ -1,5 +1,7 @@
 const MESSAGES: Record<string, string> = {
   INVALID_EMAIL_OR_PASSWORD: "البريد أو كلمة المرور غير صحيحة",
+  INVALID_PASSWORD: "كلمة المرور غير صحيحة",
+  SESSION_EXPIRED: "لحماية حسابك: سجّل الخروج وادخل من جديد، ثم أعد المحاولة",
   INVALID_EMAIL: "البريد غير صالح",
   USER_ALREADY_EXISTS: "يوجد حساب بهذا البريد",
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: "يوجد حساب بهذا البريد",

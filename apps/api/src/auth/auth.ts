@@ -52,7 +52,13 @@ export function createAuth(db: Db, env: Env, mailer: Mailer) {
         },
       },
     },
-    rateLimit: { enabled: env.NODE_ENV !== "test", window: 60, max: 30 },
+    rateLimit: {
+      enabled: env.NODE_ENV !== "test",
+      window: 60,
+      max: 30,
+      // Only reads the session, and many phones can share one address.
+      customRules: { "/get-session": false },
+    },
     advanced: { ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] } },
     plugins: [passkey({ rpName: APP_NAME }), expo()],
   });

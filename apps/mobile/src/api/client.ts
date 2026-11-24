@@ -14,7 +14,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function send(method: string, path: string, body?: unknown): Promise<Response> {
   const cookie = await sessionCookie();
   const response = await fetch(`${API_URL}/v1${path}`, {
     method,
@@ -27,16 +27,22 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }).catch(() => {
     throw new ApiError(0, "لا يوجد اتصال بالخادم");
   });
+  if (response.ok) return response;
+  const failure = (await response.json().catch(() => null)) as ApiFailure | null;
+  const { message = "حدث خطأ غير متوقع", fields } = failure?.error ?? {};
+  throw new ApiError(response.status, message, fields);
+}
 
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const response = await send(method, path, body);
   if (response.status === 204) return undefined as T;
-  const json: unknown = await response.json().catch(() => null);
-  if (response.ok) return (json as { data: T }).data;
-  const error = (json as ApiFailure | null)?.error;
-  throw new ApiError(response.status, error?.message ?? "حدث خطأ غير متوقع", error?.fields);
+  return ((await response.json()) as { data: T }).data;
 }
 
 export const api = {
   get: <T>(path: string) => request<T>("GET", path),
+  /** A file, as it is. */
+  text: async (path: string) => (await send("GET", path)).text(),
   post: <T>(path: string, body: unknown) => request<T>("POST", path, body),
   put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
   patch: <T>(path: string, body: unknown) => request<T>("PATCH", path, body),

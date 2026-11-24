@@ -5,7 +5,7 @@ export const TABS = [
   { name: "index", href: "/", label: "الرئيسية", icon: "home" },
   { name: "ledger", href: "/ledger", label: "السجلّ", icon: "ledger" },
   { name: "reports", href: "/reports", label: "التقارير", icon: "reports" },
-  { name: "more", href: "/more", label: "المزيد", icon: "more" },
+  { name: "settings", href: "/settings", label: "الإعدادات", icon: "more" },
 ] as const satisfies { name: string; href: string; label: string; icon: IconName }[];
 
 export type TabName = (typeof TABS)[number]["name"];

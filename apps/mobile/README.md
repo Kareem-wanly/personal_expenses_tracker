@@ -29,3 +29,9 @@ computer's network address in `apps/mobile/.env`, and add `exp://` to the API's 
 `src/motion` is the only place that defines durations and springs. Use `Reveal` (arrive), `Swap`
 (replace), `Collapse` (unfold), `PressableScale` (tap), `useGrow` (bars, rings), `useShake` (refuse)
 and `haptics`. Everything follows the phone's "reduce motion" setting.
+
+## Sheets
+
+Forms and details open as sheets: add the component to `features/sheets/registry.tsx`, then
+`useOpenSheet()("name", { id })`. What must stay above open sheets (toasts, the lock) goes inside
+`Overlay` in `src/app/_layout.tsx`.

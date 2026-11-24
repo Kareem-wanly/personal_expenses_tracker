@@ -6,6 +6,7 @@ import type {
   RecurringKind,
 } from "@masrufi/core/enums";
 import type { Insight } from "@masrufi/core/insights";
+import type { DebtState, GoalState } from "@masrufi/core/plans";
 
 /** What the API answers (inside `data`). apps/api checks its views against these. */
 
@@ -86,6 +87,26 @@ export type Debt = {
   settledAt: string | null;
   updatedAt: string;
 };
+
+export type RecurringRow = RecurringRule & { category: CategoryLabel | null };
+
+/** A payment, deposit or withdrawal (negative). */
+export type Movement = { id: string; amount: number; date: string; note: string | null };
+
+export type DebtDetails = Debt & { paid: number; state: DebtState; payments: Movement[] };
+
+export type Goal = {
+  id: string;
+  name: string;
+  icon: string;
+  target: number;
+  currency: string;
+  deadline: string | null;
+  achievedAt: string | null;
+  updatedAt: string;
+};
+
+export type GoalDetails = Goal & { saved: number; state: GoalState; contributions: Movement[] };
 
 export type CategoryTotal = CategoryLabel & {
   categoryId: string | null;
