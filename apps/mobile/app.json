@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "مصروفي",
+    "slug": "masrufi",
+    "scheme": "masrufi",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "backgroundColor": "#f3f0e8",
+    "ios": {
+      "bundleIdentifier": "app.masrufi.dev",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "app.masrufi.dev",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a1915"
+      }
+    },
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      ["expo-splash-screen", { "image": "./assets/icon.png", "imageWidth": 160, "backgroundColor": "#1a1915" }],
+      "expo-font",
+      "expo-secure-store",
+      ["expo-localization", { "supportsRTL": true, "forcesRTL": true }],
+      "expo-web-browser"
+    ],
+    "extra": { "supportsRTL": true, "forcesRTL": true },
+    "experiments": { "typedRoutes": false }
+  }
+}
