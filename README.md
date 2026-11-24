@@ -16,8 +16,8 @@
 - 🔁 **مصاريف متكررة**: أسبوعية/شهرية/سنوية (إيجار، اشتراكات، فواتير) تُضاف تلقائياً في موعدها مع تذكير مساء اليوم السابق، وإيقاف مؤقت وتعديل من الإعدادات.
 - 🎯 **ميزانية لكل تصنيف**: شريط تقدّم تحت كل تصنيف وتنبيه عند 80% وعند التجاوز.
 - 💼 **الدخل والرصيد**: سجّل الراتب والدخل من زر + (مصروف | دخل) لترى دخل الشهر والصافي ونسبة الادخار والرصيد الكلي.
-- 💡 **رؤى ذكية بلا AI مدفوع**: قواعد حسابية على بياناتك فقط (توقّع تجاوز الميزانية، أكبر زيادة في تصنيف، عادات صغيرة متكررة، نسبة الادخار، أكثر يوم صرف…). الكود في `src/lib/insights.ts` مع اختبارات.
-- 🎉 **نافذة «ما الجديد»** تظهر مرة واحدة بعد كل تحديث (من `src/lib/changelog.ts`) ويمكن إعادة فتحها من الإعدادات.
+- 💡 **رؤى ذكية بلا AI مدفوع**: قواعد حسابية على بياناتك فقط (توقّع تجاوز الميزانية، أكبر زيادة في تصنيف، عادات صغيرة متكررة، نسبة الادخار، أكثر يوم صرف…). الكود في `packages/core/src/insights.ts` مع اختبارات.
+- 🎉 **نافذة «ما الجديد»** تظهر مرة واحدة بعد كل تحديث (من `apps/web/src/lib/changelog.ts`) ويمكن إعادة فتحها من الإعدادات.
 - 🔔 **إشعارات Push**: تنبيه عند 80% من الميزانية وعند تجاوزها، تذكير مسائي إن لم تسجّل شيئاً اليوم، وملخص شهري في أول كل شهر — قابلة للتحكم من الإعدادات.
 - 🚀 **شاشة إقلاع (Splash)** بشعار التطبيق: صور إقلاع لكل مقاسات iPhone/iPad، وحركة افتتاحية سريعة (أقل من ثانية) داخل التطبيق المثبّت.
 - 📲 **نافذة تثبيت** تظهر عند أول زيارة: زر تثبيت حقيقي على Android/Chrome وتعليمات «إضافة إلى الشاشة الرئيسية» على iPhone.
@@ -41,7 +41,7 @@
 ### ممارسات مطبّقة
 
 - المبالغ تُخزَّن **أعداداً صحيحة بالسنت** (لا أخطاء تقريب)، والتواريخ `YYYY-MM-DD` بتوقيت جهاز المستخدم.
-- **Data Access Layer** (`src/lib/dal.ts`): كل قراءة/كتابة تتحقق من الجلسة، وكل استعلام مقيّد بـ `userId`.
+- **Data Access Layer** (`apps/web/src/lib/dal.ts`): كل قراءة/كتابة تتحقق من الجلسة، وكل استعلام مقيّد بـ `userId`.
 - كل Server Action يعيد المصادقة والتحقق بـ Zod ويتأكد من ملكية التصنيف.
 - `proxy.ts` للتحويل السريع فقط، والحماية الفعلية في الـ DAL.
 - حماية من حقن الصيغ في CSV، ومن open redirect بعد تسجيل الدخول، وترويسات أمان (X-Frame-Options وغيرها).
@@ -58,7 +58,7 @@ npm install
 انسخ ملف البيئة وعدّل `BETTER_AUTH_SECRET` (أي نص عشوائي طوله 32 حرفاً أو أكثر):
 
 ```powershell
-Copy-Item .env.example .env.local
+Copy-Item apps/web/.env.example apps/web/.env.local
 ```
 
 ```powershell
@@ -81,12 +81,12 @@ npm run db:seed -- you@example.com
 
 | الأمر | الوظيفة |
 | --- | --- |
-| `npm run db:generate` | توليد migration بعد تعديل `src/db/schema.ts` |
+| `npm run db:generate` | توليد migration بعد تعديل `packages/db/src/schema.ts` |
 | `npm run db:migrate` | تطبيق الـ migrations على قاعدة البيانات في `DATABASE_URL` |
 | `npm run db:studio` | واجهة لتصفّح قاعدة البيانات |
 | `npm run typecheck` / `npm run lint` | فحص الأنواع والكود |
 | `npm test` | اختبارات الوحدة (المحلّل العربي، حساب مواعيد التكرار، صيغ الجمع) |
-| `npm run brand` | توليد الأيقونات وشاشات الإقلاع (Splash) لكل أجهزة iPhone/iPad من `src/lib/brand.ts` (يحتاج Playwright) |
+| `npm run brand` | توليد الأيقونات وشاشات الإقلاع (Splash) لكل أجهزة iPhone/iPad من `apps/web/src/lib/brand.ts` (يحتاج Playwright) |
 
 ## النشر المجاني
 
@@ -117,7 +117,7 @@ $env:DATABASE_URL="libsql://expenses-<org>.turso.io"; $env:DATABASE_AUTH_TOKEN="
 ### 2) الاستضافة على Vercel (موصى به)
 
 1. ارفع المشروع إلى GitHub.
-2. من [vercel.com/new](https://vercel.com/new) استورد المستودع (يتعرّف على Next.js تلقائياً).
+2. من [vercel.com/new](https://vercel.com/new) استورد المستودع، واجعل **Root Directory** = `apps/web` (مع إبقاء خيار تضمين الملفات خارج المجلد مفعّلاً).
 3. أضف متغيرات البيئة:
    - `DATABASE_URL` = رابط Turso (`libsql://...`)
    - `DATABASE_AUTH_TOKEN` = التوكن
@@ -126,13 +126,13 @@ $env:DATABASE_URL="libsql://expenses-<org>.turso.io"; $env:DATABASE_AUTH_TOKEN="
    - للإشعارات (انسخها من `.env.local`): `NEXT_PUBLIC_VAPID_PUBLIC_KEY`، `VAPID_PRIVATE_KEY`، `VAPID_SUBJECT`، `CRON_SECRET`
 4. Deploy ✅
 
-> **الإشعارات المجدولة**: `vercel.json` يعرّف مهمة يومية (`/api/cron/daily`) تعمل حوالي 17:00 UTC (≈ 8 مساءً بتوقيت دمشق/الرياض).
+> **الإشعارات المجدولة**: `apps/web/vercel.json` يعرّف مهمة يومية (`/api/cron/daily`) تعمل حوالي 17:00 UTC (≈ 8 مساءً بتوقيت دمشق/الرياض).
 > خطة Hobby المجانية تسمح بتشغيل يومي واحد بدقة ±59 دقيقة. Vercel يرسل `CRON_SECRET` تلقائياً كـ Bearer token.
 > بعد إضافة `NEXT_PUBLIC_VAPID_PUBLIC_KEY` لأول مرة اعمل **Redeploy** لأنه يُضمَّن وقت البناء.
 
 ### بديل: Netlify
 
-نفس الخطوات: استورد المستودع من [app.netlify.com](https://app.netlify.com)، فيستخدم Netlify محوّل Next.js تلقائياً. أضف متغيرات البيئة نفسها، و`BETTER_AUTH_URL` **إلزامي** هنا (رابط Netlify)، واجعل أمر البناء `npm run vercel-build` لتطبيق الـ migrations تلقائياً.
+نفس الخطوات: استورد المستودع من [app.netlify.com](https://app.netlify.com)، فيستخدم Netlify محوّل Next.js تلقائياً. أضف متغيرات البيئة نفسها، و`BETTER_AUTH_URL` **إلزامي** هنا (رابط Netlify)، واجعل مجلد الموقع (Package directory) `apps/web` وأمر البناء `npm run vercel-build` لتطبيق الـ migrations تلقائياً.
 
 ### التثبيت على الجوال
 
@@ -141,22 +141,22 @@ $env:DATABASE_URL="libsql://expenses-<org>.turso.io"; $env:DATABASE_AUTH_TOKEN="
 
 ## هيكل المشروع
 
+مستودع واحد (npm workspaces). الأوامر كلها تُشغَّل من جذر المستودع.
+
 ```
-src/
-├─ app/
-│  ├─ (auth)/login, register     صفحات الدخول
-│  ├─ (app)/                     الصفحات المحمية + شريط التنقل
-│  │  ├─ page.tsx                الرئيسية
-│  │  ├─ expenses/ reports/ settings/
-│  ├─ api/auth/[...all]          Better Auth
-│  ├─ api/export                 تصدير CSV
-│  ├─ manifest.ts, sw.ts, serwist/   PWA
-├─ components/                   مكوّنات الواجهة (+ ui من shadcn)
-├─ db/schema.ts, index.ts        Drizzle
-├─ lib/                          auth, dal, money, dates, validations
-├─ server/queries.ts, actions.ts طبقة البيانات
-└─ proxy.ts                      تحويل غير المسجّلين
-drizzle/                         ملفات الـ migrations
+apps/
+└─ web/                          الموقع (Next.js)
+   ├─ src/app                    الصفحات و API و PWA
+   ├─ src/components             مكوّنات الواجهة (+ ui من shadcn)
+   ├─ src/lib                    auth, dal, push, backup
+   ├─ src/server                 queries و actions
+   ├─ src/db/index.ts            الاتصال بقاعدة البيانات
+   └─ vercel.json, .env.local, local.db
+packages/
+├─ core/                         منطق خالص بلا متصفح ولا سيرفر: المال، التواريخ، التكرار، الرؤى، الإدخال بجملة
+├─ contracts/                    قواعد التحقق (Zod)
+└─ db/                           الجداول (Drizzle) وملفات الـ migrations
+android/                         بناء الـ APK الحالي (TWA)
 ```
 
 ## أفكار للتطوير لاحقاً

@@ -1,5 +1,5 @@
 // Builds the Android app (a Trusted Web Activity around the live site) and
-// copies the signed APK to public/download/masrufi.apk.
+// copies the signed APK to apps/web/public/download/masrufi.apk.
 //
 //   node android/build.mjs            # regenerate the project + build
 //
@@ -23,7 +23,7 @@ const BUILD_TOOLS = join(SDK, "build-tools", readdirSync(join(SDK, "build-tools"
 const KEYSTORE = join(TOOLS, "signing", "masrufi.keystore");
 const PASSWORD_FILE = join(TOOLS, "signing", "keystore-password.txt");
 const PROJECT = join(TOOLS, "project"); // generated Gradle project (throwaway)
-const OUT = join(ROOT, "public", "download", "masrufi.apk");
+const OUT = join(ROOT, "apps", "web", "public", "download", "masrufi.apk");
 
 const { TwaGenerator, TwaManifest, ConsoleLog } = createRequire(join(TOOLS, "bubblewrap", "package.json"))(
   "@bubblewrap/core",

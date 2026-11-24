@@ -11,7 +11,7 @@
 node android/build.mjs
 ```
 
-ينتج `public/download/masrufi.apk` (موقّعاً)، ويُنشر مع الموقع على Vercel.
+ينتج `apps/web/public/download/masrufi.apk` (موقّعاً)، ويُنشر مع الموقع على Vercel.
 
 ## الأدوات (خارج المستودع)
 
@@ -30,7 +30,7 @@ node android/build.mjs
 
 ## ربط الموقع بالتطبيق
 
-`public/.well-known/assetlinks.json` يحمل بصمة SHA-256 لمفتاح التوقيع. هذا ما
+`apps/web/public/.well-known/assetlinks.json` يحمل بصمة SHA-256 لمفتاح التوقيع. هذا ما
 يخفي شريط العنوان داخل التطبيق. لعرض البصمة:
 
 ```powershell
