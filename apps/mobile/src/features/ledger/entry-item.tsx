@@ -21,7 +21,8 @@ export function EntryItem({ entry, currency, meta }: Props) {
   const { edit } = useEntryActions();
 
   const openMenu = () =>
-    box.current?.measureInWindow((x, y, width, height) => {
+    // Page coordinates: measureInWindow leaves out the status bar on Android.
+    box.current?.measure((_x, _y, width, height, x, y) => {
       haptics.lift();
       openEntryMenu({ entry, currency, frame: { x, y, width, height } });
     });

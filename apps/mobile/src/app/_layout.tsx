@@ -10,7 +10,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { authClient } from "@/api/auth";
 import { queryClient } from "@/api/query-client";
 import { EntryMenuHost } from "@/features/entry-menu/entry-menu-host";
-import { LockOverlay } from "@/features/lock/lock-overlay";
+import { LockOverlay, useIsLocked } from "@/features/lock/lock-overlay";
 import { SplashOverlay } from "@/features/splash/splash-overlay";
 import { forceRightToLeft, rtlRoot } from "@/theme/rtl";
 import { useColors, useScheme } from "@/theme/theme";
@@ -27,6 +27,8 @@ export default function RootLayout() {
   const fontsReady = useAppFonts();
   const { data: session, isPending } = authClient.useSession();
   const ready = fontsReady && !isPending;
+  // Screen readers must not reach what the lock covers.
+  const hidden = useIsLocked(session?.user.id);
 
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
@@ -47,16 +49,22 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <StatusBar style={scheme === "dark" ? "light" : "dark"} />
           <View {...rtlRoot} style={styles.root}>
-            <Stack screenOptions={{ headerShown: false, contentStyle, animation: "fade" }}>
-              <Stack.Protected guard={!!session}>
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="entry" options={sheetOptions} />
-                <Stack.Screen name="sheet/[name]" options={sheetOptions} />
-              </Stack.Protected>
-              <Stack.Protected guard={!session}>
-                <Stack.Screen name="(auth)" />
-              </Stack.Protected>
-            </Stack>
+            <View
+              style={styles.root}
+              importantForAccessibility={hidden ? "no-hide-descendants" : "auto"}
+              accessibilityElementsHidden={hidden}
+            >
+              <Stack screenOptions={{ headerShown: false, contentStyle, animation: "fade" }}>
+                <Stack.Protected guard={!!session}>
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="entry" options={sheetOptions} />
+                  <Stack.Screen name="sheet/[name]" options={sheetOptions} />
+                </Stack.Protected>
+                <Stack.Protected guard={!session}>
+                  <Stack.Screen name="(auth)" />
+                </Stack.Protected>
+              </Stack>
+            </View>
             <Overlay>
               <EntryMenuHost />
               <ToastHost />

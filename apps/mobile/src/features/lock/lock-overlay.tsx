@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 import Animated, { FadeOut, ZoomIn } from "react-native-reanimated";
 
 import { MAX_ATTEMPTS, failedAttempt } from "@masrufi/core/app-lock";
@@ -25,9 +25,15 @@ const NO_ATTEMPTS = { count: 0, until: 0 };
 /** Covers the app while it is locked. `userId`: who is signed in. */
 export function LockOverlay({ userId }: { userId: string }) {
   useLockWatcher();
-  const { config, locked } = lockStore.use();
-  if (!locked || config?.userId !== userId) return null;
+  const { config } = lockStore.use();
+  if (!useIsLocked(userId) || !config) return null;
   return <LockScreen config={config} />;
+}
+
+/** Locked for this user (a lock set by another account on the phone doesn't count). */
+export function useIsLocked(userId: string | undefined): boolean {
+  const { config, locked } = lockStore.use();
+  return locked && userId !== undefined && config?.userId === userId;
 }
 
 function readAttempts(): typeof NO_ATTEMPTS {
@@ -96,7 +102,10 @@ function LockScreen({ config }: { config: LockConfig }) {
       : undefined;
 
   return (
-    <Animated.View exiting={FadeOut.duration(durations.normal)} style={[StyleSheet.absoluteFill, styles.screen, { backgroundColor: colors.background }]}>
+    <Animated.View
+      exiting={FadeOut.duration(durations.normal)}
+      style={[StyleSheet.absoluteFill, styles.screen, { backgroundColor: colors.background }]}
+    >
       <Animated.View
         entering={ZoomIn.springify().stiffness(springs.pop.stiffness).damping(springs.pop.damping)}
         style={[styles.badge, { backgroundColor: colors.ink }]}
@@ -111,15 +120,20 @@ function LockScreen({ config }: { config: LockConfig }) {
         onComplete={check}
         extraKey={
           canUseBiometrics ? (
-            <PressableScale accessibilityRole="button" accessibilityLabel="البصمة" onPress={() => void tryBiometrics()}>
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel="البصمة"
+              onPress={() => void tryBiometrics()}
+            >
               <Icon name="fingerprint" color={colors.accent} size={34} />
             </PressableScale>
           ) : null
         }
       />
-      <View>
-        <Button label="نسيت الرمز؟ ادخل بكلمة المرور" kind="plain" onPress={() => void forgot()} />
-      </View>
+      <Text variant="small" color="muted">
+        ستدخل من جديد بكلمة المرور
+      </Text>
+      <Button label="نسيت الرمز؟" kind="plain" onPress={() => void forgot()} />
     </Animated.View>
   );
 }
