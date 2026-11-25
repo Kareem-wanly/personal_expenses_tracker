@@ -2,7 +2,9 @@ import { type ReactNode, useEffect } from "react";
 import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import Animated, {
+  KeyboardState,
   interpolate,
+  useAnimatedKeyboard,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -12,9 +14,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 
 import { durations, easeOut, springs } from "@/motion/tokens";
-import { useKeyboardHeight } from "@/motion/use-keyboard-height";
 import { radius, spacing, useColors } from "@/theme/theme";
 
+import { fitAboveKeyboard } from "./sheet-fit";
 import { useBackButton } from "./use-back-button";
 
 const CLOSE_DISTANCE = 120;
@@ -28,8 +30,9 @@ export function Sheet({ children, onClosed }: Props) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const y = useSharedValue(height);
-  // Follows the keyboard frame by frame, so the sheet sits on top of it.
-  const keyboard = useKeyboardHeight();
+  // Follows the keyboard frame by frame. It also stops Android from shrinking the screen under us.
+  const keyboard = useAnimatedKeyboard();
+  const restHeight = useSharedValue(0);
 
   useEffect(() => {
     y.set(withSpring(0, springs.gentle));
@@ -60,12 +63,19 @@ export function Sheet({ children, onClosed }: Props) {
   });
 
   const top = insets.top + spacing.lg;
-  const sheetStyle = useAnimatedStyle(() => ({
-    maxHeight: height - top - keyboard.value,
-    marginBottom: keyboard.value,
-    transform: [{ translateY: y.value }],
+  const sheetStyle = useAnimatedStyle(() => {
+    // A closed keyboard may still report its last height.
+    const open =
+      keyboard.state.value !== KeyboardState.CLOSED && keyboard.state.value !== KeyboardState.UNKNOWN;
+    const space = { now: height, closed: height, sheet: restHeight.value };
+    return {
+      ...fitAboveKeyboard(space, open ? keyboard.height.value : 0, top),
+      transform: [{ translateY: y.value }],
+    };
+  });
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(y.value, [0, height], [0.45, 0], "clamp"),
   }));
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: interpolate(y.value, [0, height], [0.45, 0], "clamp") }));
 
   return (
     <View style={styles.root}>
@@ -73,11 +83,13 @@ export function Sheet({ children, onClosed }: Props) {
         <Pressable accessibilityLabel="إغلاق" onPress={close} style={StyleSheet.absoluteFill} />
       </Animated.View>
       <Animated.View
-        style={[
-          styles.sheet,
-          { backgroundColor: colors.background },
-          sheetStyle,
-        ]}
+        onLayout={({ nativeEvent }) => {
+          // Measured only while no keyboard is around.
+          const state = keyboard.state.value;
+          if (state === KeyboardState.CLOSED || state === KeyboardState.UNKNOWN)
+            restHeight.set(nativeEvent.layout.height);
+        }}
+        style={[styles.sheet, { backgroundColor: colors.background }, sheetStyle]}
       >
         <GestureDetector gesture={drag}>
           <View style={styles.handleArea}>

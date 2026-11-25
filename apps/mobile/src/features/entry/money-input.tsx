@@ -54,7 +54,6 @@ export function MoneyInput({ value, onChange, userCurrency, errors, convert = tr
     <Animated.View style={[styles.block, shaking]}>
       <AnimatedInput
         accessibilityLabel="المبلغ"
-        autoFocus={value.amount === ""}
         inputMode="decimal"
         placeholder="0"
         placeholderTextColor={colors.muted}
