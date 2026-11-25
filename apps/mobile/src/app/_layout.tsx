@@ -1,6 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as SystemUI from "expo-system-ui";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
@@ -33,6 +34,11 @@ export default function RootLayout() {
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
   }, [ready]);
+
+  // What shows behind sheets and around the app, so it is never light in dark mode.
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(colors.background);
+  }, [colors.background]);
 
   // Another account must never see the previous one's data.
   const userId = session?.user.id;
@@ -81,7 +87,8 @@ export default function RootLayout() {
 const transparent = { backgroundColor: "transparent" };
 
 const sheetOptions = {
-  presentation: "transparentModal",
+  // Inside the app's own layer, so the system bars and the page underneath stay ours.
+  presentation: "containedTransparentModal",
   animation: "none",
   contentStyle: transparent,
 } as const;
