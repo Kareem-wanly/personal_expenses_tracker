@@ -1,3 +1,4 @@
+import { randomUUID } from "expo-crypto";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -6,7 +7,7 @@ import type { Goal, GoalDetails } from "@masrufi/contracts/api/responses";
 import { formatShortDate, todayISO } from "@masrufi/core/dates";
 import { formatMoney, fromMinor } from "@masrufi/core/money";
 
-import { api } from "@/api/client";
+import { write } from "@/api/write";
 import { useGoals, useProfile } from "@/api/queries";
 import { useAction } from "@/api/use-action";
 import { AmountForm } from "@/features/plans/amount-form";
@@ -53,10 +54,10 @@ export function GoalSheet({ close }: SheetProps) {
     showToast(reached ? "🎉 حققت هدفك!" : kind === "deposit" ? "تمت إضافة المبلغ" : "تم تسجيل السحب");
   };
   const move = (amount: number) =>
-    run(() => api.post<Goal>(`${path}/contributions`, { kind, amount, date: today }), announce);
+    run(() => write.post<Goal>(`${path}/contributions`, { id: randomUUID(), kind, amount, date: today }), announce);
 
   async function remove() {
-    if (await run(() => api.delete(path), "تم حذف الهدف")) close();
+    if (await run(() => write.delete(path), "تم حذف الهدف")) close();
   }
 
   return (
@@ -84,7 +85,7 @@ export function GoalSheet({ close }: SheetProps) {
           currency={currency}
           signed
           busy={busy}
-          onDelete={(itemId) => void run(() => api.delete(`${path}/contributions/${itemId}`), "تم الحذف")}
+          onDelete={(itemId) => void run(() => write.delete(`${path}/contributions/${itemId}`), "تم الحذف")}
         />
         <ConfirmButton label="حذف الهدف" title={`حذف هدف «${name}» وسجلّه؟`} disabled={busy} onConfirm={() => void remove()} />
       </SheetBody>

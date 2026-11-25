@@ -5,7 +5,7 @@ import { CURRENCIES } from "@masrufi/core/constants";
 import { fromMinor } from "@masrufi/core/money";
 import type { Profile } from "@masrufi/contracts/api/responses";
 
-import { api } from "@/api/client";
+import { write } from "@/api/write";
 import { useProfile } from "@/api/queries";
 import { useAction } from "@/api/use-action";
 import { FormLayout } from "@/features/entry/form-layout";
@@ -38,7 +38,7 @@ function Form({ me, close }: SheetProps & { me: Profile }) {
 
   async function submit() {
     const changes = { name, currency, monthlyBudget: parseAmount(budget) };
-    if (await run(() => api.patch<Profile>("/me", changes), "تم حفظ الإعدادات")) close();
+    if (await run(() => write.patch<Profile>("/me", changes), "تم حفظ الإعدادات")) close();
   }
 
   return (

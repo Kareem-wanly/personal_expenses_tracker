@@ -1,3 +1,4 @@
+import { randomUUID } from "expo-crypto";
 import { useLocalSearchParams } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
@@ -6,7 +7,7 @@ import { formatShortDate, todayISO } from "@masrufi/core/dates";
 import { formatMoney, fromMinor } from "@masrufi/core/money";
 import { dueLabel } from "@masrufi/core/plans";
 
-import { api } from "@/api/client";
+import { write } from "@/api/write";
 import { useDebts, useProfile } from "@/api/queries";
 import { useAction } from "@/api/use-action";
 import { AmountForm } from "@/features/plans/amount-form";
@@ -38,10 +39,10 @@ export function DebtSheet({ close }: SheetProps) {
   const { person, currency, state, payments } = debt;
   const path = `/debts/${id}`;
   const announce = (updated: Debt) => showToast(updated.settledAt ? "تم السداد بالكامل 🎉" : "تم تسجيل الدفعة");
-  const pay = (amount: number) => run(() => api.post<Debt>(`${path}/payments`, { amount, date: today }), announce);
+  const pay = (amount: number) => run(() => write.post<Debt>(`${path}/payments`, { id: randomUUID(), amount, date: today }), announce);
 
   async function remove() {
-    if (await run(() => api.delete(path), "تم حذف الدين")) close();
+    if (await run(() => write.delete(path), "تم حذف الدين")) close();
   }
 
   return (
@@ -67,7 +68,7 @@ export function DebtSheet({ close }: SheetProps) {
                 label="سُدّد بالكامل"
                 kind="plain"
                 disabled={busy}
-                onPress={() => void run(() => api.post<Debt>(`${path}/settle`, {}), announce)}
+                onPress={() => void run(() => write.post<Debt>(`${path}/settle`, {}), announce)}
               />
             }
           />
@@ -77,7 +78,7 @@ export function DebtSheet({ close }: SheetProps) {
           movements={payments}
           currency={currency}
           busy={busy}
-          onDelete={(paymentId) => void run(() => api.delete(`${path}/payments/${paymentId}`), "تم حذف الدفعة")}
+          onDelete={(paymentId) => void run(() => write.delete(`${path}/payments/${paymentId}`), "تم حذف الدفعة")}
         />
         <ConfirmButton label="حذف الدين" title={`حذف دين ${person} وكل دفعاته؟`} disabled={busy} onConfirm={() => void remove()} />
       </SheetBody>

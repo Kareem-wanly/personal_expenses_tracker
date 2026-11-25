@@ -7,7 +7,7 @@ import { FREQUENCIES } from "@masrufi/core/enums";
 import { fromMinor } from "@masrufi/core/money";
 import { FREQUENCY_LABELS } from "@masrufi/core/recurrence";
 
-import { api } from "@/api/client";
+import { write } from "@/api/write";
 import { useCategories, useProfile, useRecurring } from "@/api/queries";
 import { useAction } from "@/api/use-action";
 import { useSave } from "@/api/use-save";
@@ -59,9 +59,9 @@ function Form({ rule, categories, close }: FormProps) {
   const submit = () =>
     save({ amount: minor, categoryId, note, paymentMethod, frequency, nextDate, source: source ?? undefined });
   const toggle = (on: boolean) =>
-    void run(() => api.post(`${path}/${on ? "resume" : "pause"}`, {}), on ? "تم استئناف التكرار" : "تم إيقاف التكرار مؤقتاً");
+    void run(() => write.post(`${path}/${on ? "resume" : "pause"}`, {}), on ? "تم استئناف التكرار" : "تم إيقاف التكرار مؤقتاً");
   async function remove() {
-    if (await run(() => api.delete(path), "تم حذف التكرار")) close();
+    if (await run(() => write.delete(path), "تم حذف التكرار")) close();
   }
 
   return (

@@ -5,7 +5,7 @@ import { StyleSheet, View } from "react-native";
 import { CATEGORY_COLORS, CATEGORY_ICONS } from "@masrufi/core/constants";
 import { fromMinor } from "@masrufi/core/money";
 
-import { api } from "@/api/client";
+import { write } from "@/api/write";
 import { useCategories } from "@/api/queries";
 import { useAction } from "@/api/use-action";
 import { useSave } from "@/api/use-save";
@@ -34,7 +34,7 @@ export function CategoryForm({ close }: SheetProps) {
 
   const submit = () => save({ name, icon, color, budget: parseAmount(budget) });
   async function remove() {
-    if (await run(() => api.delete(`/categories/${id}`), "تم حذف التصنيف")) close();
+    if (await run(() => write.delete(`/categories/${id}`), "تم حذف التصنيف")) close();
   }
 
   return (

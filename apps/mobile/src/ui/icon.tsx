@@ -22,6 +22,7 @@ const paths = {
   sparkle: "M12 4l2 6 6 2-6 2-2 6-2-6-6-2 6-2z",
   logout: "M10 4H5v16h5M14 8l4 4-4 4M18 12H9",
   backspace: "M20 6H9l-6 6 6 6h11zM12 10l4 4M16 10l-4 4",
+  cloudOff: "M3 3l18 18M8 7a6 6 0 0 1 9.5 3A4 4 0 0 1 20 16.5M17 19H7a4 4 0 0 1-1.5-7.7",
   more: "M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M6 15v4",
 };
 

@@ -7,8 +7,10 @@ import { formatMoney, toMinor } from "@masrufi/core/money";
 import { countExpenses } from "@masrufi/core/plural";
 import type { DraftExpense } from "@masrufi/core/quick-add/parse";
 
-import { api } from "@/api/client";
+import { write } from "@/api/write";
+import { isQueued } from "@/api/write-policy";
 import { queryClient } from "@/api/query-client";
+import { SAVED_ON_PHONE } from "@/api/use-action";
 import { haptics } from "@/motion/haptics";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
@@ -34,12 +36,12 @@ export function QuickAddList({ drafts, categories, currency, onDone }: Props) {
 
   const save = useMutation({
     mutationFn: () =>
-      api.post("/expenses/batch", {
+      write.post("/expenses/batch", {
         items: named.map(({ draft, key }) => ({ ...draft, amount: toMinor(draft.amount ?? 0), id: idFor(key) })),
       }),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       haptics.success();
-      showToast(`تمت إضافة ${countExpenses(drafts.length)}`);
+      showToast(isQueued(result) ? SAVED_ON_PHONE : `تمت إضافة ${countExpenses(drafts.length)}`);
       onDone();
       await queryClient.invalidateQueries();
     },

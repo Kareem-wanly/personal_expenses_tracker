@@ -2,18 +2,21 @@ import { useRouter } from "expo-router";
 
 import { todayISO } from "@masrufi/core/dates";
 
-import { api } from "@/api/client";
+import { write } from "@/api/write";
+import { isQueued } from "@/api/write-policy";
 import { useProfile } from "@/api/queries";
 import { queryClient } from "@/api/query-client";
+import { SAVED_ON_PHONE } from "@/api/use-action";
 import { type EditableEntry, copyOf, pathOf } from "@/features/ledger/entry";
 import { haptics } from "@/motion/haptics";
 import { showToast } from "@/ui/toast-store";
 
 async function attempt(work: () => Promise<unknown>, done: () => void) {
   try {
-    await work();
+    const result = await work();
     haptics.success();
-    done();
+    if (isQueued(result)) showToast(SAVED_ON_PHONE);
+    else done();
   } catch (error) {
     haptics.error();
     showToast(error instanceof Error ? error.message : "حدث خطأ", { tone: "error" });
@@ -27,7 +30,7 @@ export function useEntryActions() {
   const timezone = useProfile().data?.timezone;
 
   const save = (entry: EditableEntry, date: string, message: string) =>
-    attempt(() => api.post(pathOf(entry.kind), copyOf(entry, date)), () => showToast(message));
+    attempt(() => write.post(pathOf(entry.kind), copyOf(entry, date)), () => showToast(message));
 
   return {
     edit: (entry: EditableEntry) =>
@@ -38,7 +41,7 @@ export function useEntryActions() {
     /** Straight away, with a way back. */
     remove: (entry: EditableEntry) =>
       attempt(
-        () => api.delete(`${pathOf(entry.kind)}/${entry.item.id}`),
+        () => write.delete(`${pathOf(entry.kind)}/${entry.item.id}`),
         () =>
           showToast("تم الحذف", {
             action: { label: "تراجع", run: () => void save(entry, entry.item.date, "تمت الاستعادة") },

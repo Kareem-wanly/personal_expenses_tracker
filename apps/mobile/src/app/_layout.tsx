@@ -1,4 +1,4 @@
-import { QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
@@ -9,6 +9,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { authClient } from "@/api/auth";
+import { watchConnection } from "@/api/online";
+import { resumeWrites } from "@/api/outbox";
+import { forgetSavedData, persistOptions } from "@/api/persist";
 import { queryClient } from "@/api/query-client";
 import { EntryMenuHost } from "@/features/entry-menu/entry-menu-host";
 import { LockOverlay, useIsLocked } from "@/features/lock/lock-overlay";
@@ -20,6 +23,7 @@ import { Overlay } from "@/ui/overlay";
 import { ToastHost } from "@/ui/toast-host";
 
 forceRightToLeft();
+watchConnection();
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -42,9 +46,12 @@ export default function RootLayout() {
 
   // Another account must never see the previous one's data.
   const userId = session?.user.id;
+  // Waits for the session: while it loads there is no user yet, and the saved data must stay.
   useEffect(() => {
-    if (!userId) queryClient.clear();
-  }, [userId]);
+    if (isPending || userId) return;
+    queryClient.clear();
+    void forgetSavedData();
+  }, [isPending, userId]);
 
   if (!ready) return null;
   const contentStyle = { backgroundColor: colors.background };
@@ -52,7 +59,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={persistOptions}
+          onSuccess={() => void resumeWrites(queryClient)}
+        >
           <StatusBar style={scheme === "dark" ? "light" : "dark"} />
           <View {...rtlRoot} style={styles.root}>
             <View
@@ -78,7 +89,7 @@ export default function RootLayout() {
               <SplashOverlay />
             </Overlay>
           </View>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

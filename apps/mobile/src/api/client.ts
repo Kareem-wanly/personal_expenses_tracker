@@ -3,16 +3,9 @@ import type { ApiFailure } from "@masrufi/contracts/api/responses";
 import { sessionCookie } from "./auth";
 import { API_URL } from "./config";
 
-/** The API refused: `message` can be shown as it is, `fields` belong to form fields. */
-export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-    readonly fields: Record<string, string[]> = {},
-  ) {
-    super(message);
-  }
-}
+import { ApiError } from "./api-error";
+
+export { ApiError };
 
 async function send(method: string, path: string, body?: unknown): Promise<Response> {
   const cookie = await sessionCookie();
@@ -33,7 +26,8 @@ async function send(method: string, path: string, body?: unknown): Promise<Respo
   throw new ApiError(response.status, message, fields);
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+/** One request, as it is (writes usually go through `write`, which also works offline). */
+export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const response = await send(method, path, body);
   if (response.status === 204) return undefined as T;
   return ((await response.json()) as { data: T }).data;

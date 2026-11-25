@@ -1,6 +1,6 @@
 import type { Profile } from "@masrufi/contracts/api/responses";
 
-import { api } from "@/api/client";
+import { write } from "@/api/write";
 import { queryClient } from "@/api/query-client";
 import { useAction } from "@/api/use-action";
 import { Group, Row } from "@/ui/group";
@@ -19,7 +19,7 @@ export function NotificationGroup({ me }: { me: Profile }) {
   const change = async (key: (typeof ITEMS)[number]["key"], on: boolean) => {
     // Shown at once; read again from the server if it refused.
     queryClient.setQueryData<Profile>(["me"], (current) => current && { ...current, [key]: on });
-    const saved = await run(() => api.patch<Profile>("/me", { [key]: on }), () => undefined);
+    const saved = await run(() => write.patch<Profile>("/me", { [key]: on }), () => undefined);
     if (!saved) await queryClient.invalidateQueries({ queryKey: ["me"] });
   };
   return (
